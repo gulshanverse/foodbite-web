@@ -2,24 +2,24 @@
 
 **Good Food. Less Waste.**
 
-FoodBite is an India-first surplus food marketplace foundation. It is designed to help eligible food businesses turn surplus food into value through nearby, pickup-first discovery. Phase 0 establishes the production-oriented application shell and deliberately does not implement marketplace transactions.
+FoodBite is an India-first surplus food marketplace foundation. It is designed to help eligible food businesses turn surplus food into value through nearby, pickup-first discovery. Phase 1 adds the foundational authentication, user, profile, session, and role-based authorization layer without implementing marketplace transactions.
 
-## Users
+## Users and roles
 
-The planned audiences are buyers, sellers, and platform admins, with NGO and bulk-buyer workflows reserved for later phases.
+The current self-service roles are **Buyer** and **Seller**. **Admin** is represented in the authorization model but cannot be self-assigned during signup. NGO, moderator, support, and super-admin roles are reserved for controlled future workflows.
 
 ## Technology
 
-The current foundation uses Next.js App Router, React, TypeScript strict mode, Tailwind CSS, Prisma with PostgreSQL configuration, Zod, React Hook Form, Vitest, Playwright, pnpm, and a modular-monolith structure.
+The project uses Next.js App Router, React, TypeScript strict mode, Tailwind CSS, Prisma with PostgreSQL, Auth.js/NextAuth-compatible credentials authentication, bcrypt password hashing, Zod, React Hook Form, Vitest, Playwright, pnpm, and a modular-monolith structure.
 
 ## Repository structure
 
 | Path | Purpose |
 | --- | --- |
-| `apps/web` | Next.js web application, route groups, UI shell, and tests |
-| `packages/validation` | Shared Zod validation package |
-| `prisma` | Prisma schema and future migration boundary |
-| `docs` | Product, architecture, security, and delivery documentation |
+| `apps/web` | Next.js application, auth routes, protected route layouts, UI, and tests |
+| `packages/validation` | Shared Zod schemas for signup, login, and profiles |
+| `prisma` | Prisma schema and reviewed migration history |
+| `docs` | Product, architecture, security, database, and delivery documentation |
 | `.github/workflows` | Continuous integration |
 
 ## Getting started
@@ -27,18 +27,31 @@ The current foundation uses Next.js App Router, React, TypeScript strict mode, T
 ```bash
 pnpm install
 cp .env.example .env.local
+pnpm db:generate
 pnpm dev
 ```
 
-The app runs at `http://localhost:3000`. The database is not required to view the Phase 0 shell; configure `DATABASE_URL` before using Prisma commands.
+The app runs at `http://localhost:3000`. Authentication and profile persistence require PostgreSQL. Set `DATABASE_URL` and `AUTH_SECRET` in `.env.local`, then apply the migration:
+
+```bash
+pnpm db:migrate:deploy
+```
+
+The Phase 1 migration is `prisma/migrations/20260902171500_phase1_auth/migration.sql`. No fake users or seed records are included.
+
+## Authentication and authorization
+
+Use `/signup` to create a Buyer or Seller account, `/login` to sign in, `/logout` to sign out, and `/account` to view the authenticated application entry point. `/buyer/*`, `/seller/*`, and `/admin/*` are protected by middleware and repeated server-side role checks. The server reads the current user, role, and account status from the signed session and database; browser state, URL parameters, and client-selected roles are not authorization boundaries.
 
 ## Environment variables
 
-`.env.example` documents the server-side integration points for PostgreSQL, authentication, storage, payments, maps, and email. Real secrets must remain in local or deployment secret stores and must never be committed.
+`.env.example` documents the required `DATABASE_URL`, `AUTH_SECRET`, and public application URL. Integration variables remain optional until their corresponding features are implemented. Real secrets must remain in local or deployment secret stores and must never be committed.
 
 ## Quality checks
 
 ```bash
+pnpm db:validate
+pnpm db:generate
 pnpm lint
 pnpm typecheck
 pnpm test
@@ -48,4 +61,4 @@ pnpm build
 
 ## Development philosophy
 
-FoodBite is being built incrementally as a production-grade modular monolith. Core transactions will remain backend-authoritative, while AI and external integrations will remain optional layers. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for decisions and deferred infrastructure.
+FoodBite is being built incrementally as a production-grade modular monolith. Passwords are never stored in plaintext, privileged roles are never granted from untrusted signup input, authentication failures are intentionally generic, and core transactions will remain backend-authoritative. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/SECURITY.md`](docs/SECURITY.md) for the implemented decisions and deferred work.
