@@ -14,10 +14,13 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:generate": "prisma generate",
-    "db:validate": "DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/foodbite} prisma validate"
+    "db:validate": "DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/foodbite} prisma validate",
+    "prisma": "prisma",
+    "db:migrate:deploy": "prisma migrate deploy"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
+    "@prisma/client": "^6.15.0",
     "prettier": "^3.6.2",
     "prisma": "^6.15.0"
   }

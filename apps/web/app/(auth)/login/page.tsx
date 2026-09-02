@@ -1,5 +1,2 @@
-import { PlaceholderPage } from "@/components/shared/placeholder-page";
-
-export default function Page() {
-  return <PlaceholderPage title="Sign in" description="This route is reserved for the authentication foundation. The workflow will be introduced in a later phase." />;
-}
+import { AuthForm } from "@/components/auth/auth-form";
+export default function LoginPage() { return <AuthForm mode="login" />; }

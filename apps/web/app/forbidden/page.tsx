@@ -1,0 +1,2 @@
+import Link from "next/link";
+export default function ForbiddenPage() { return <main className="grid min-h-screen place-items-center px-6 text-center"><div><p className="text-sm font-semibold text-[#e85d3f]">403 Forbidden</p><h1 className="mt-2 text-4xl font-bold text-[#173f3b]">This area is restricted</h1><p className="mx-auto mt-4 max-w-md text-[#55706c]">Your account does not have permission to access this area.</p><Link className="mt-6 inline-block font-semibold underline" href="/">Return home</Link></div></main>; }

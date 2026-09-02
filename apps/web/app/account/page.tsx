@@ -1,0 +1,3 @@
+import Link from "next/link";
+import { requireAuth } from "@/lib/authorization";
+export default async function AccountPage() { const user = await requireAuth(); return <main className="mx-auto max-w-5xl px-6 py-16"><p className="text-sm font-semibold uppercase tracking-[.18em] text-[#e85d3f]">Authenticated account</p><h1 className="mt-3 text-4xl font-bold text-[#173f3b]">Welcome to FoodBite</h1><p className="mt-4 text-[#55706c]">Signed in as {user.email}. Your role is {user.role}.</p><div className="mt-8 flex gap-4"><Link className="font-semibold underline" href={user.role === "SELLER" ? "/seller/profile" : "/buyer/profile"}>Open profile</Link><Link className="font-semibold underline" href="/api/auth/signout">Log out</Link></div></main>; }
