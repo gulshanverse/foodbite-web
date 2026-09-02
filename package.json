@@ -1,0 +1,24 @@
+{
+  "name": "foodbite-platform",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.4.1",
+  "scripts": {
+    "dev": "pnpm --filter @foodbite/web dev",
+    "build": "pnpm --filter @foodbite/web build",
+    "start": "pnpm --filter @foodbite/web start",
+    "lint": "pnpm --filter @foodbite/web lint",
+    "typecheck": "pnpm --filter @foodbite/web typecheck && pnpm --filter @foodbite/validation typecheck",
+    "test": "pnpm --filter @foodbite/web test",
+    "test:e2e": "pnpm --filter @foodbite/web test:e2e",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "prisma generate",
+    "db:validate": "DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/foodbite} prisma validate"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "prettier": "^3.6.2",
+    "prisma": "^6.15.0"
+  }
+}
