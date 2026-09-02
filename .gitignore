@@ -146,8 +146,5 @@ vite.config.ts.timestamp-*
 .DS_Store
 .idea
 *.swp
-
-.turbo
-.DS_Store
-.idea
-*.swp
+apps/web/test-results/
+playwright-report/
