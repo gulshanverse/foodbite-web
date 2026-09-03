@@ -1,4 +1,4 @@
-# FoodBite
+# FoodBite: The Food MarketPlace
 
 **Good Food. Less Waste.**
 
