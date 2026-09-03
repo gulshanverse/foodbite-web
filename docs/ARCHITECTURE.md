@@ -26,3 +26,13 @@ NextAuth signs the session cookie. `getCurrentUser()` resolves the session ident
 **Planned:** email verification, password reset, controlled admin provisioning, seller onboarding, and richer profile editing.
 
 **Future:** OAuth, phone OTP, business onboarding, marketplace workflows, payments, and domain-specific operational modules. Microservices, Redis, Kubernetes, search infrastructure, and event streaming remain intentionally deferred.
+
+## Phase 2 seller domain
+
+The seller domain is organized around `User → SellerProfile → Business` and `SellerProfile → FoodListing → Inventory`. Seller API routes resolve the authenticated user first, require the `SELLER` role and active account status, then query resources with the seller's own profile ID. Client-supplied seller, business, or listing identifiers are never trusted as ownership proof.
+
+Listings use integer paise for INR money, explicit category/listing/food-type enums, and a controlled state machine: `DRAFT → PENDING_REVIEW → ACTIVE → PAUSED → ACTIVE`, with terminal `SOLD_OUT`, `EXPIRED`, `BLOCKED`, or `CANCELLED` paths. Phase 2 uses direct seller activation as a temporary development policy after business presence and pickup-window validation; there is no claim that moderation or regulatory verification occurred.
+
+Inventory is created atomically only on activation and is mutated through `seller-domain.ts`, not directly from pages. The service preserves `total = available + reserved + sold`, rejects negative quantities, and increments an optimistic version in a transaction. Reservation and purchase operations are intentionally absent until checkout exists. Expiration is represented by the shared `expireListings()` operation; a future background job can invoke it.
+
+Images use metadata rows and an S3-compatible storage abstraction. The current environment validates type, size, filename, and alt text, but refuses to pretend an upload succeeded while a provider adapter is not configured. Buyer purchasing, cart, checkout, payments, and orders are not part of Phase 2.
