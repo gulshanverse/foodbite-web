@@ -62,3 +62,17 @@ pnpm build
 ## Development philosophy
 
 FoodBite is being built incrementally as a production-grade modular monolith. Passwords are never stored in plaintext, privileged roles are never granted from untrusted signup input, authentication failures are intentionally generic, and core transactions will remain backend-authoritative. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/SECURITY.md`](docs/SECURITY.md) for the implemented decisions and deferred work.
+
+## Phase 2 seller domain
+
+Phase 2 adds the first real marketplace domain for authenticated sellers: `User → SellerProfile → Business` and `SellerProfile → FoodListing → Inventory`. Sellers can maintain business information, create drafts, publish eligible surplus listings, pause or resume listings, inspect seller-owned listings, and review inventory quantities. Listing prices are represented as integer INR paise, and inventory maintains `total = available + reserved + sold` through transactional domain operations.
+
+Seller routes include `/seller`, `/seller/business`, `/seller/listings`, `/seller/listings/new`, and `/seller/inventory`. Seller APIs derive ownership from the authenticated session and do not trust client-provided seller IDs. Food categories are provided only through the explicit development seed:
+
+```bash
+pnpm prisma db seed
+```
+
+The seed creates categories only; it does not create fake sellers, listings, inventory, buyers, or orders. Object storage is intentionally an abstraction in this phase. Image metadata is validated, but uploads are not claimed as successful until an S3-compatible provider adapter is configured.
+
+Buyer discovery, public marketplace pages, cart, checkout, reservations, orders, payments, delivery, and pickup QR workflows are deferred to later phases.
