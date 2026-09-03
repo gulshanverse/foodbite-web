@@ -33,6 +33,55 @@ enum SellerVerificationStatus {
   SUSPENDED
 }
 
+enum BusinessType {
+  RESTAURANT
+  HOTEL
+  BAKERY
+  CAFE
+  MESS
+  CATERER
+  WEDDING_EVENT
+  SUPERMARKET
+  CLOUD_KITCHEN
+  CORPORATE_CAFETERIA
+  OTHER
+}
+
+enum ListingType {
+  EXACT
+  SURPRISE_BOX
+}
+
+enum FoodType {
+  VEGETARIAN
+  NON_VEGETARIAN
+  VEGAN
+  JAIN
+  OTHER
+}
+
+enum ListingStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  PAUSED
+  SOLD_OUT
+  EXPIRED
+  BLOCKED
+  CANCELLED
+}
+
+enum ListingUnit {
+  PORTION
+  PIECE
+  BOX
+  KG
+  GRAM
+  LITER
+  PACK
+  ITEM
+}
+
 model User {
   id               String        @id @default(uuid()) @db.Uuid
   email            String        @unique
@@ -84,16 +133,104 @@ model SellerProfile {
   updatedAt          DateTime                 @updatedAt
   user               User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
   business           Business?                @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  listings           FoodListing[]
 
   @@index([businessId])
 }
 
 model Business {
-  id        String          @id @default(uuid()) @db.Uuid
-  name      String
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-  sellers   SellerProfile[]
+  id                String          @id @default(uuid()) @db.Uuid
+  name              String
+  type              BusinessType?
+  description       String?
+  phone             String?
+  email             String?
+  address           String?
+  city              String?
+  state             String?
+  pincode           String?
+  latitude          Decimal?        @db.Decimal(9, 6)
+  longitude         Decimal?        @db.Decimal(9, 6)
+  fssaiNumber       String?
+  fssaiDocumentUrl  String?
+  verificationStatus SellerVerificationStatus @default(PENDING)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  sellers           SellerProfile[]
+}
+
+model FoodCategory {
+  id          String        @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String        @unique
+  description String?
+  imageUrl    String?
+  isActive    Boolean       @default(true)
+  sortOrder   Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  listings    FoodListing[]
+}
+
+model FoodListing {
+  id               String        @id @default(uuid()) @db.Uuid
+  sellerId         String        @db.Uuid
+  categoryId       String        @db.Uuid
+  name             String
+  slug             String        @unique
+  description      String?
+  listingType      ListingType
+  foodType         FoodType
+  originalPrice    Int
+  sellingPrice     Int
+  quantity         Int
+  unit             ListingUnit
+  preparedAt       DateTime?
+  pickupStart      DateTime
+  pickupEnd        DateTime
+  packagingInfo    String?
+  allergenInfo     String?
+  status           ListingStatus @default(DRAFT)
+  publishedAt     DateTime?
+  expiredAt       DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  seller           SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  category         FoodCategory  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  inventory        Inventory?
+  images           FoodImage[]
+
+  @@index([sellerId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([foodType])
+  @@index([pickupEnd])
+  @@index([createdAt])
+}
+
+model Inventory {
+  id               String      @id @default(uuid()) @db.Uuid
+  listingId        String      @unique @db.Uuid
+  totalQuantity    Int
+  availableQuantity Int
+  reservedQuantity Int         @default(0)
+  soldQuantity     Int         @default(0)
+  version          Int         @default(1)
+  updatedAt        DateTime    @updatedAt
+  listing          FoodListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model FoodImage {
+  id        String      @id @default(uuid()) @db.Uuid
+  listingId String      @db.Uuid
+  url       String
+  storageKey String
+  altText   String
+  sortOrder Int         @default(0)
+  createdAt DateTime    @default(now())
+  listing   FoodListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, sortOrder])
 }
 
 model Account {
