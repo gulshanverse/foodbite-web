@@ -36,3 +36,9 @@ Listings use integer paise for INR money, explicit category/listing/food-type en
 Inventory is created atomically only on activation and is mutated through `seller-domain.ts`, not directly from pages. The service preserves `total = available + reserved + sold`, rejects negative quantities, and increments an optimistic version in a transaction. Reservation and purchase operations are intentionally absent until checkout exists. Expiration is represented by the shared `expireListings()` operation; a future background job can invoke it.
 
 Images use metadata rows and an S3-compatible storage abstraction. The current environment validates type, size, filename, and alt text, but refuses to pretend an upload succeeded while a provider adapter is not configured. Buyer purchasing, cart, checkout, payments, and orders are not part of Phase 2.
+
+## Phase 3 buyer marketplace
+
+The marketplace query layer in `apps/web/lib/marketplace.ts` is the server-side source for `/explore`, `/buyer/explore`, and `/food/[slug]`. It uses Prisma-safe filters for search, category, food type, price bounds, city, and pagination, and defensively requires `ACTIVE`, positive inventory, `pickupEnd > now`, an active seller account, and an attached business. Cards use `Inventory.availableQuantity`, not the original listing quantity. Distance is optional and uses Haversine only when both buyer and business coordinates exist.
+
+Public browsing does not require login. Favorites are the only Phase 3 buyer mutation and are restricted to active BUYER accounts with a unique database constraint. The design deliberately excludes purchasing behavior: there is no cart, checkout, reservation, order, payment, delivery, or pickup-QR layer.

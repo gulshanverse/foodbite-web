@@ -76,3 +76,11 @@ pnpm prisma db seed
 The seed creates categories only; it does not create fake sellers, listings, inventory, buyers, or orders. Object storage is intentionally an abstraction in this phase. Image metadata is validated, but uploads are not claimed as successful until an S3-compatible provider adapter is configured.
 
 Buyer discovery, public marketplace pages, cart, checkout, reservations, orders, payments, delivery, and pickup QR workflows are deferred to later phases.
+
+## Phase 3 buyer marketplace
+
+Public discovery is available at `/explore`, with listing detail at `/food/:slug`. The authenticated buyer route `/buyer/explore` reuses the same marketplace view inside the existing buyer authorization boundary. Marketplace reads use real `FoodListing`, `Inventory`, `FoodCategory`, `Business`, `SellerProfile`, and `FoodImage` data.
+
+A listing is visible only when it is active, has positive `Inventory.availableQuantity`, has a future `pickupEnd`, belongs to an active seller account, and has a business relationship. Search, category, food-type, price, city, distance, sorting, and pagination state use URL parameters. Buyer favorites are persisted in the database for active buyers; no local-only favorite source of truth is used.
+
+Phase 3 is discovery only. There are no purchase, cart, checkout, reservation, order, payment, delivery, or pickup-QR actions.

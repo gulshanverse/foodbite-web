@@ -16,3 +16,9 @@ Authenticated sellers can view a database-backed dashboard, maintain seller-owne
 ## Phase 3+ — Deferred
 
 Buyer discovery, public marketplace listing detail, cart, checkout, orders, reservations, pickup QR, payments, delivery, moderation, admin verification, notifications, donations, bulk clearance, and intelligence layers remain deferred. Phase 2 does not create buyer-visible purchasing behavior.
+
+## Phase 3 — Implemented
+
+Public buyers can browse eligible real surplus listings through `/explore` and `/food/:slug`, with authenticated buyers retaining `/buyer/explore`. Discovery supports database-backed category browsing, search, food-type and price parameters, sorting, pagination, optional city/coordinate inputs, listing detail, seller business context, seller-provided food information, inventory availability, pickup windows, and database-backed favorites for active buyers.
+
+Only listings with active status, positive inventory, future pickup end, an active seller account, and a business relationship are visible. Phase 3 remains discovery-only; cart, checkout, reservations, orders, payments, delivery, and pickup QR are not implemented.
