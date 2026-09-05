@@ -98,6 +98,7 @@ model User {
   sellerProfile    SellerProfile?
   accounts         Account[]
   sessions         Session[]
+  favorites        Favorite[]
 
   @@index([status])
   @@index([role])
@@ -199,6 +200,7 @@ model FoodListing {
   category         FoodCategory  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   inventory        Inventory?
   images           FoodImage[]
+  favorites        Favorite[]
 
   @@index([sellerId])
   @@index([categoryId])
@@ -231,6 +233,18 @@ model FoodImage {
   listing   FoodListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   @@index([listingId, sortOrder])
+}
+
+model Favorite {
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String      @db.Uuid
+  listingId String      @db.Uuid
+  createdAt DateTime    @default(now())
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing   FoodListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([listingId])
 }
 
 model Account {
