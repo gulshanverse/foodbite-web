@@ -101,7 +101,7 @@ model Business {
 }
 
 model FoodCategory {
-  id String @id @default(uuid())
+  id String @id @default(uuid()) @db.Uuid
   name String
   slug String @unique
   description String?
