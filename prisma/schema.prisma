@@ -101,7 +101,7 @@ model Business {
 }
 
 model FoodCategory {
-  id String @id @default(uuid()) @db.Uuid
+  id String @id @default(uuid())
   name String
   slug String @unique
   description String?
@@ -216,14 +216,16 @@ model Reservation {
   quantity Int
   status ReservationStatus @default(ACTIVE)
   expiresAt DateTime
+  orderId String? @db.Uuid
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user User @relation(fields: [userId], references: [id], onDelete: Restrict)
   listing FoodListing @relation(fields: [listingId], references: [id], onDelete: Restrict)
-  order Order?
+  order Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
   @@index([userId, status])
   @@index([listingId, status])
   @@index([expiresAt])
+  @@index([orderId])
 }
 
 model Order {
@@ -248,8 +250,7 @@ model Order {
   items OrderItem[]
   payment Payment?
   pickup Pickup?
-  reservation Reservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
-  reservationId String? @unique @db.Uuid
+  reservations Reservation[]
   @@index([buyerId, createdAt])
   @@index([status, createdAt])
 }
