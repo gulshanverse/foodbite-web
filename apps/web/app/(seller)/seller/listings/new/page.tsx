@@ -1,0 +1,3 @@
+import { requireRole } from "@/lib/authorization";
+import { ListingForm } from "@/components/seller/seller-forms";
+export default async function NewListingPage() { await requireRole("SELLER"); return <main className="mx-auto max-w-4xl px-6 py-12"><p className="text-sm font-semibold uppercase tracking-[.18em] text-[#e85d3f]">Seller listings</p><h1 className="mt-3 text-4xl font-bold text-[#173f3b]">Add surplus food</h1><p className="mt-3 text-[#55706c]">Save a draft first. Publishing will validate the business relationship, pricing, quantity, and pickup window on the server.</p><div className="mt-10 rounded-2xl border border-[#dbe4df] bg-white p-6"><ListingForm /></div></main>; }
