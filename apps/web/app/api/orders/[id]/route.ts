@@ -1,5 +1,0 @@
-import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
-import { cancelOrder, getBuyerOrder } from "@/lib/commerce-domain";
-export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) { const user = await getCurrentUser(); if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 }); try { const { id } = await params; const order = await getBuyerOrder(user.id, id); return order ? NextResponse.json({ order }) : NextResponse.json({ error: "Order not found." }, { status: 404 }); } catch { return NextResponse.json({ error: "Buyer access is required." }, { status: 403 }); } }
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) { const user = await getCurrentUser(); if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 }); try { const { id } = await params; return NextResponse.json({ order: await cancelOrder(user.id, id, await request.json()) }); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Order could not be cancelled." }, { status: 400 }); } }
