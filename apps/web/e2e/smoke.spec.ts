@@ -16,3 +16,10 @@ test("unauthenticated users are redirected from protected routes", async ({ page
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByRole("heading", { name: /Welcome back/i })).toBeVisible();
 });
+
+test("unauthenticated buyers are redirected from commerce routes", async ({ page }) => {
+  await page.goto("/buyer/cart");
+  await expect(page).toHaveURL(/\/login$/);
+  await page.goto("/buyer/orders");
+  await expect(page).toHaveURL(/\/login$/);
+});
