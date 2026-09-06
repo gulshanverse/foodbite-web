@@ -84,3 +84,11 @@ Public discovery is available at `/explore`, with listing detail at `/food/:slug
 A listing is visible only when it is active, has positive `Inventory.availableQuantity`, has a future `pickupEnd`, belongs to an active seller account, and has a business relationship. Search, category, food-type, price, city, distance, sorting, and pagination state use URL parameters. Buyer favorites are persisted in the database for active buyers; no local-only favorite source of truth is used.
 
 Phase 3 is discovery only. There are no purchase, cart, checkout, reservation, order, payment, delivery, or pickup-QR actions.
+
+## Phase 4 transactional commerce
+
+Phase 4 adds protected buyer routes at `/buyer/cart`, `/buyer/checkout`, `/buyer/orders`, and `/buyer/orders/:id`, plus seller order operations at `/seller/orders` and `/seller/orders/:id`. Cart, checkout, inventory reservations, order totals, payment state, cancellation policy, seller status transitions, and pickup verification are enforced in server-side domain services.
+
+Checkout supports one seller per order, recalculates integer INR paise totals, atomically reserves current inventory, and uses an idempotency key. Payment success is accepted only through a verified server webhook. In an environment without payment-provider configuration, checkout reports that payment is unavailable and does not fake a successful order.
+
+The Phase 4 migration is `prisma/migrations/20260904100000_phase4_commerce/migration.sql`. Reservation expiry and provider-webhook handling are designed to be idempotent. Pickup codes are hashed before storage. Live payment-provider credentials, provider-specific UI, background expiry scheduling, refunds through a real provider, and isolated PostgreSQL integration fixtures remain deployment hardening work.

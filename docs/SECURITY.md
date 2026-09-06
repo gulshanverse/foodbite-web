@@ -29,3 +29,13 @@ The Phase 2 storage route is a provider boundary only. Production upload signing
 Public marketplace reads use a selective server-side Prisma projection and never return password hashes, session fields, private user information, or seller authentication data. The eligibility predicate requires an active listing, positive inventory availability, a future pickup end, an active seller account, and a valid business relationship; the query also defensively filters expired rows even if their stored status has not been updated.
 
 Search and filter parameters are validated with Zod and translated into Prisma-safe conditions. Buyer favorites require an authenticated active BUYER account, re-check listing eligibility, and use a unique composite constraint to prevent duplicates. No purchase, reservation, order, checkout, payment, or delivery mutation exists in Phase 3.
+
+## Phase 4 commerce controls
+
+Cart and order ownership is derived from the authenticated session. Buyers can query only their own carts and orders; sellers can query and mutate only orders connected to their own seller profile. The browser cannot choose final price, seller ownership, payment state, inventory values, or pickup completion.
+
+Checkout recalculates totals in integer paise and uses conditional inventory updates inside a Prisma transaction. Reservation state changes are idempotent: expiration, payment failure, and cancellation release inventory only when the reservation is still active. Payment success moves reserved quantity to sold quantity without modifying available quantity, preserving `total = available + reserved + sold`.
+
+Payment provider secrets remain server-only. Webhooks require an HMAC signature and a unique provider event ID, so duplicate deliveries do not duplicate payment transitions or inventory finalization. The current environment intentionally returns an explicit unconfigured-provider state rather than faking payment success.
+
+Pickup codes are hashed before storage. Pickup verification requires an active seller session, seller-owned order, `READY_FOR_PICKUP` state, a valid code, and an unverified pickup record. Repeated verification safely returns the completed state instead of applying a second completion side effect.

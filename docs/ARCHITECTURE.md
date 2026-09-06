@@ -42,3 +42,11 @@ Images use metadata rows and an S3-compatible storage abstraction. The current e
 The marketplace query layer in `apps/web/lib/marketplace.ts` is the server-side source for `/explore`, `/buyer/explore`, and `/food/[slug]`. It uses Prisma-safe filters for search, category, food type, price bounds, city, and pagination, and defensively requires `ACTIVE`, positive inventory, `pickupEnd > now`, an active seller account, and an attached business. Cards use `Inventory.availableQuantity`, not the original listing quantity. Distance is optional and uses Haversine only when both buyer and business coordinates exist.
 
 Public browsing does not require login. Favorites are the only Phase 3 buyer mutation and are restricted to active BUYER accounts with a unique database constraint. The design deliberately excludes purchasing behavior: there is no cart, checkout, reservation, order, payment, delivery, or pickup-QR layer.
+
+## Phase 4 transactional commerce
+
+Phase 4 extends the modular monolith with `Cart → CartItem`, `Order → OrderItem`, `Reservation`, `Payment`, `PaymentWebhook`, and `Pickup` models. `apps/web/lib/commerce-domain.ts` is the domain boundary for cart ownership, single-seller checkout, server-calculated INR totals, conditional inventory reservation, order transitions, cancellation, reservation expiry, webhook idempotency, and pickup verification.
+
+Checkout is intentionally server-authoritative. It recalculates totals from current listing prices, revalidates active seller/business/listing state and pickup expiry, performs conditional inventory updates inside a transaction, and records an idempotency key per buyer. A payment-provider interface exists separately from the domain; the current non-test environment reports `UNCONFIGURED` instead of claiming a payment succeeded. Verified provider webhooks are the only path that confirms payment and finalizes reserved inventory.
+
+Orders are scoped by buyer or seller relation at query time. Sellers can move confirmed orders through preparation to ready-for-pickup, while pickup completion requires a server-validated hashed code. Reservation expiry, payment failure, and cancellation release inventory only from active reservations. The invariant `totalQuantity = availableQuantity + reservedQuantity + soldQuantity` remains the core inventory safety rule.
