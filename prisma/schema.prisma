@@ -82,6 +82,35 @@ enum ListingUnit {
   ITEM
 }
 
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  CONFIRMED
+  PREPARING
+  READY_FOR_PICKUP
+  PICKED_UP
+  COMPLETED
+  CANCELLED
+  REFUND_PENDING
+  REFUNDED
+}
+
+enum ReservationStatus {
+  ACTIVE
+  CONFIRMED
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  CREATED
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
 model User {
   id               String        @id @default(uuid()) @db.Uuid
   email            String        @unique
@@ -99,6 +128,8 @@ model User {
   accounts         Account[]
   sessions         Session[]
   favorites        Favorite[]
+  cart             Cart?
+  buyerOrders      Order[]       @relation("BuyerOrders")
 
   @@index([status])
   @@index([role])
@@ -135,6 +166,7 @@ model SellerProfile {
   user               User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
   business           Business?                @relation(fields: [businessId], references: [id], onDelete: SetNull)
   listings           FoodListing[]
+  orders             Order[]       @relation("SellerOrders")
 
   @@index([businessId])
 }
@@ -201,6 +233,9 @@ model FoodListing {
   inventory        Inventory?
   images           FoodImage[]
   favorites        Favorite[]
+  cartItems        CartItem[]
+  orderItems       OrderItem[]
+  reservations     Reservation[] @relation("ListingReservations")
 
   @@index([sellerId])
   @@index([categoryId])
@@ -218,8 +253,11 @@ model Inventory {
   reservedQuantity Int         @default(0)
   soldQuantity     Int         @default(0)
   version          Int         @default(1)
-  updatedAt        DateTime    @updatedAt
-  listing          FoodListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+    updatedAt         DateTime    @updatedAt
+  listing           FoodListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reservations      Reservation[] @relation("InventoryReservations")
+
+  @@index([listingId, availableQuantity])
 }
 
 model FoodImage {
@@ -245,6 +283,138 @@ model Favorite {
 
   @@unique([userId, listingId])
   @@index([listingId])
+}
+
+model Cart {
+  id        String     @id @default(uuid()) @db.Uuid
+  userId    String     @unique @db.Uuid
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+}
+
+model CartItem {
+  id        String      @id @default(uuid()) @db.Uuid
+  cartId    String      @db.Uuid
+  listingId String      @db.Uuid
+  quantity  Int
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  cart      Cart        @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  listing   FoodListing @relation(fields: [listingId], references: [id], onDelete: Restrict)
+
+  @@unique([cartId, listingId])
+  @@index([listingId])
+}
+
+model Order {
+  id            String         @id @default(uuid()) @db.Uuid
+  orderNumber   String         @unique
+  buyerId       String         @db.Uuid
+    sellerId       String         @db.Uuid
+  idempotencyKey String
+  status        OrderStatus    @default(PENDING_PAYMENT)
+  subtotal      Int
+  discount      Int            @default(0)
+  totalAmount   Int
+  currency      String         @default("INR")
+  cancelledAt   DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  buyer         User           @relation("BuyerOrders", fields: [buyerId], references: [id], onDelete: Restrict)
+  seller        SellerProfile  @relation("SellerOrders", fields: [sellerId], references: [id], onDelete: Restrict)
+  items         OrderItem[]
+  reservations  Reservation[]
+  payments      Payment[]
+  pickup        Pickup?
+
+  @@index([buyerId, createdAt])
+  @@index([sellerId, status, createdAt])
+  @@index([status])
+  @@unique([buyerId, idempotencyKey])
+}
+
+model OrderItem {
+  id                  String      @id @default(uuid()) @db.Uuid
+  orderId             String      @db.Uuid
+  listingId           String      @db.Uuid
+  listingNameSnapshot String
+  unitPrice           Int
+  quantity            Int
+  totalPrice          Int
+  foodTypeSnapshot    FoodType
+  pickupStartSnapshot DateTime
+  pickupEndSnapshot   DateTime
+  createdAt           DateTime    @default(now())
+  order              Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  listing            FoodListing @relation(fields: [listingId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([listingId])
+}
+
+model Reservation {
+  id         String            @id @default(uuid()) @db.Uuid
+  orderId    String            @db.Uuid
+  listingId  String            @db.Uuid
+  quantity   Int
+  status     ReservationStatus @default(ACTIVE)
+  expiresAt  DateTime
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  order      Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  listing    FoodListing       @relation("ListingReservations", fields: [listingId], references: [id], onDelete: Restrict, map: "Reservation_listing_fk")
+  inventory  Inventory         @relation("InventoryReservations", fields: [listingId], references: [listingId], onDelete: Restrict, map: "Reservation_inventory_fk")
+
+  @@index([orderId])
+  @@index([listingId, status])
+  @@index([expiresAt, status])
+}
+
+model Payment {
+  id                String        @id @default(uuid()) @db.Uuid
+  orderId           String        @db.Uuid
+  provider           String
+  providerOrderId   String?
+  providerPaymentId String?
+  amount            Int
+  currency          String        @default("INR")
+  status            PaymentStatus @default(CREATED)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@unique([provider, providerOrderId])
+  @@unique([provider, providerPaymentId])
+}
+
+model PaymentWebhook {
+  id          String    @id @default(uuid()) @db.Uuid
+  provider    String
+  eventId     String
+  eventType   String
+  payloadHash String
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([provider, eventId])
+}
+
+model Pickup {
+  id          String    @id @default(uuid()) @db.Uuid
+  orderId     String    @unique @db.Uuid
+  pickupCodeHash String
+  qrTokenHash String?
+  verifiedAt  DateTime?
+  verifiedBy  String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([verifiedBy])
 }
 
 model Account {

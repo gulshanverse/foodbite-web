@@ -20,3 +20,11 @@ export const inventoryAdjustmentSchema = z.object({ totalQuantity: z.number().in
 
 export const marketplaceQuerySchema = z.object({ q: z.string().trim().max(100).optional(), category: z.string().trim().max(80).optional(), foodType: z.enum(["VEGETARIAN", "NON_VEGETARIAN", "VEGAN", "JAIN", "OTHER"]).optional(), minPrice: z.coerce.number().int().nonnegative().optional(), maxPrice: z.coerce.number().int().nonnegative().optional(), sort: z.enum(["recommended", "nearest", "ending-soon", "lowest-price", "highest-discount"]).default("recommended"), page: z.coerce.number().int().min(1).max(10000).default(1), city: z.string().trim().max(80).optional(), lat: z.coerce.number().min(-90).max(90).optional(), lng: z.coerce.number().min(-180).max(180).optional() });
 export type MarketplaceQuery = z.infer<typeof marketplaceQuerySchema>;
+
+export const cartItemSchema = z.object({ listingId: z.string().uuid(), quantity: z.number().int().positive().max(99) });
+export const cartUpdateSchema = z.object({ quantity: z.number().int().positive().max(99) });
+export const checkoutSchema = z.object({ idempotencyKey: z.string().trim().min(16).max(128) });
+export const orderTransitionSchema = z.object({ status: z.enum(["CONFIRMED", "PREPARING", "READY_FOR_PICKUP"]) });
+export const cancellationSchema = z.object({ reason: z.string().trim().max(500).optional() });
+export const pickupVerificationSchema = z.object({ pickupCode: z.string().regex(/^\d{6}$/) });
+export const paymentWebhookSchema = z.object({ provider: z.string().trim().min(2).max(40), eventId: z.string().trim().min(3).max(200), eventType: z.string().trim().min(3).max(120), orderId: z.string().uuid(), providerPaymentId: z.string().trim().max(200).optional(), status: z.enum(["SUCCESS", "FAILED", "REFUNDED"]) });
