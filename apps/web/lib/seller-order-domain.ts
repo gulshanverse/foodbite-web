@@ -1,6 +1,7 @@
 import type { OrderStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { recordAuditEvent } from "@/lib/audit";
+import { notifyOrderEvent } from "@/lib/notification-domain";
 
 const transitions: Partial<Record<OrderStatus, OrderStatus[]>> = {
   PAID: ["CONFIRMED"],
@@ -23,5 +24,7 @@ export async function transitionSellerOrder(userId: string, orderId: string, to:
     return result;
   });
   await recordAuditEvent({ actorId: userId, action: "SELLER_ORDER_STATUS_CHANGED", resourceType: "Order", resourceId: orderId, metadata: { from: order.status, to } });
+  const type = to === "CONFIRMED" ? "ORDER_CONFIRMED" : to === "PREPARING" ? "ORDER_PREPARING" : to === "READY_FOR_PICKUP" ? "ORDER_READY_FOR_PICKUP" : to === "COMPLETED" ? "ORDER_COMPLETED" : "ORDER_CANCELLED";
+  void notifyOrderEvent(orderId, type).catch((error) => console.error(JSON.stringify({ operation: "notification_dispatch", orderId, type, outcome: "failed", errorCategory: error instanceof Error ? error.message : "unknown" })));
   return updated;
 }

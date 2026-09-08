@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { refundGatewayPayment } from "@/lib/payment";
 import { recordAuditEvent } from "@/lib/audit";
+import { notifyOrderEvent } from "@/lib/notification-domain";
+
+function dispatch(orderId: string, type: "REFUND_PENDING" | "REFUND_COMPLETED") { void notifyOrderEvent(orderId, type).catch((error) => console.error(JSON.stringify({ operation: "notification_dispatch", orderId, type, outcome: "failed", errorCategory: error instanceof Error ? error.message : "unknown" }))); }
 
 export async function refundOrder(actorId: string, orderId: string) {
   const order = await prisma.order.findUnique({ where: { id: orderId }, include: { payment: true } });
@@ -12,6 +15,7 @@ export async function refundOrder(actorId: string, orderId: string) {
     if (changed.count !== 1 && order.status !== "REFUND_PENDING") throw new Error("Order is not eligible for refund.");
     await tx.payment.update({ where: { id: order.payment!.id }, data: { status: "PENDING" } });
   });
+  dispatch(orderId, "REFUND_PENDING");
   try {
     await refundGatewayPayment(order.payment.providerPaymentId, order.payment.amount);
   } catch (error) {
@@ -23,5 +27,6 @@ export async function refundOrder(actorId: string, orderId: string) {
     return tx.order.update({ where: { id: orderId }, data: { status: "REFUNDED" } });
   });
   await recordAuditEvent({ actorId, action: "REFUND_CONFIRMED", resourceType: "Order", resourceId: orderId, metadata: { outcome: "provider_confirmed" } });
+  dispatch(orderId, "REFUND_COMPLETED");
   return refunded;
 }

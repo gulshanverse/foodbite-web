@@ -1,8 +1,12 @@
 import { randomBytes, randomInt, createHash } from "node:crypto";
 import { Prisma, type FoodType, type ListingUnit } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { notifyOrderEvent } from "@/lib/notification-domain";
 
 const RESERVATION_MINUTES = 10;
+function dispatchOrderNotification(orderId: string, type: Parameters<typeof notifyOrderEvent>[1]) {
+  void notifyOrderEvent(orderId, type).catch((error) => console.error(JSON.stringify({ operation: "notification_dispatch", orderId, type, outcome: "failed", errorCategory: error instanceof Error ? error.message : "unknown" })));
+}
 export function hashSecret(value: string) { return createHash("sha256").update(value).digest("hex"); }
 export function createPickupSecrets() { const code = randomInt(100000, 1000000).toString(); const token = randomBytes(32).toString("base64url"); return { code, token, codeHash: hashSecret(code), tokenHash: hashSecret(token) }; }
 function orderNumber() { return `FB-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString("hex").toUpperCase()}`; }
@@ -40,7 +44,7 @@ export async function reserveListing(userId: string, listingId: string, quantity
 }
 
 export async function createOrderFromCart(userId: string) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const now = new Date(); await expireReservations(tx, now);
     const buyer = await tx.user.findFirst({ where: { id: userId, role: "BUYER", status: "ACTIVE", deletedAt: null }, include: { buyerProfile: true, cart: { include: { items: { include: { listing: { include: { inventory: true, seller: { include: { business: true } } } } } } } } } });
     if (!buyer?.cart?.items.length) throw new Error("Your cart is empty.");
@@ -56,16 +60,30 @@ export async function createOrderFromCart(userId: string) {
     const order = await tx.order.create({ data: { orderNumber: orderNumber(), buyerId: userId, subtotal, totalAmount: subtotal, buyerName: buyer.buyerProfile?.name ?? buyer.email, buyerPhone: buyer.phone, pickupCity: buyer.buyerProfile?.city, pickupPincode: buyer.buyerProfile?.pincode, items: { create: items }, reservations: { connect: reservations }, payment: { create: { provider: process.env.PAYMENT_PROVIDER ?? "razorpay", amount: subtotal, currency: "INR", status: "CREATED" } }, pickup: { create: { status: "PENDING", pickupCodeHash: secrets.codeHash, pickupCodeLast4: secrets.code.slice(-4), qrTokenHash: secrets.tokenHash } } }, include: { items: true, payment: true, pickup: true } });
     await tx.cartItem.deleteMany({ where: { cartId: buyer.cart.id } }); return { order, pickupCode: secrets.code, qrToken: secrets.token };
   }, { isolationLevel: "Serializable" });
+  dispatchOrderNotification(result.order.id, "ORDER_CREATED");
+  return result;
 }
 
 export async function markPaymentSuccessful(providerOrderId: string, providerPaymentId: string) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const payment = await tx.payment.findUnique({ where: { providerOrderId }, include: { order: { include: { reservations: true } } } }); if (!payment) throw new Error("Payment not found."); if (payment.status === "SUCCESS") return payment.order;
     const now = new Date(); const order = await tx.order.update({ where: { id: payment.orderId }, data: { status: "PAID", paidAt: now } }); await tx.payment.update({ where: { id: payment.id }, data: { status: "SUCCESS", providerPaymentId, paidAt: now } });
     for (const reservation of payment.order.reservations) { if (reservation.status !== "ACTIVE") continue; await tx.inventory.update({ where: { listingId: reservation.listingId }, data: { reservedQuantity: { decrement: reservation.quantity }, soldQuantity: { increment: reservation.quantity }, version: { increment: 1 } } }); await tx.reservation.update({ where: { id: reservation.id }, data: { status: "CONFIRMED" } }); }
     return order;
   });
+  dispatchOrderNotification(result.id, "PAYMENT_SUCCESS");
+  return result;
+}
+export async function markPaymentFailed(providerOrderId: string, failureReason: string) {
+  const result = await prisma.$transaction(async (tx) => {
+    const payment = await tx.payment.findUnique({ where: { providerOrderId } });
+    if (!payment) throw new Error("Payment not found.");
+    if (payment.status === "FAILED") return payment;
+    return tx.payment.update({ where: { id: payment.id }, data: { status: "FAILED", failureReason: failureReason.slice(0, 200) } });
+  });
+  dispatchOrderNotification(result.orderId, "PAYMENT_FAILED");
+  return result;
 }
 export async function getBuyerOrders(userId: string) { return prisma.order.findMany({ where: { buyerId: userId }, orderBy: { createdAt: "desc" }, include: { items: true, payment: true, pickup: true } }); }
 export async function getBuyerOrder(userId: string, id: string) { return prisma.order.findFirst({ where: { id, buyerId: userId }, include: { items: { include: { listing: { include: { images: { orderBy: { sortOrder: "asc" } } } }, seller: { include: { business: true } } } }, payment: true, pickup: true } }); }
-export async function cancelBuyerOrder(userId: string, id: string) { return prisma.$transaction(async (tx) => { const order = await tx.order.findFirst({ where: { id, buyerId: userId }, include: { reservations: true } }); if (!order || order.status !== "PENDING_PAYMENT") throw new Error("Only unpaid orders can be cancelled here."); for (const reservation of order.reservations) if (reservation.status === "ACTIVE") { await tx.inventory.update({ where: { listingId: reservation.listingId }, data: { availableQuantity: { increment: reservation.quantity }, reservedQuantity: { decrement: reservation.quantity }, version: { increment: 1 } } }); await tx.reservation.update({ where: { id: reservation.id }, data: { status: "CANCELLED" } }); } await tx.pickup.updateMany({ where: { orderId: id }, data: { status: "CANCELLED" } }); return tx.order.update({ where: { id }, data: { status: "CANCELLED", cancelledAt: new Date() } }); }); }
+export async function cancelBuyerOrder(userId: string, id: string) { const order = await prisma.$transaction(async (tx) => { const order = await tx.order.findFirst({ where: { id, buyerId: userId }, include: { reservations: true } }); if (!order || order.status !== "PENDING_PAYMENT") throw new Error("Only unpaid orders can be cancelled here."); for (const reservation of order.reservations) if (reservation.status === "ACTIVE") { await tx.inventory.update({ where: { listingId: reservation.listingId }, data: { availableQuantity: { increment: reservation.quantity }, reservedQuantity: { decrement: reservation.quantity }, version: { increment: 1 } } }); await tx.reservation.update({ where: { id: reservation.id }, data: { status: "CANCELLED" } }); } await tx.pickup.updateMany({ where: { orderId: id }, data: { status: "CANCELLED" } }); return tx.order.update({ where: { id }, data: { status: "CANCELLED", cancelledAt: new Date() } }); }); dispatchOrderNotification(order.id, "ORDER_CANCELLED"); return order; }

@@ -119,6 +119,38 @@ enum PickupStatus {
   CANCELLED
 }
 
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+  PUSH
+  WHATSAPP
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum NotificationType {
+  ORDER_CREATED
+  PAYMENT_SUCCESS
+  PAYMENT_FAILED
+  ORDER_CONFIRMED
+  ORDER_PREPARING
+  ORDER_READY_FOR_PICKUP
+  ORDER_PICKED_UP
+  ORDER_COMPLETED
+  ORDER_CANCELLED
+  REFUND_PENDING
+  REFUND_COMPLETED
+  NEW_SELLER_ORDER
+  OPERATIONAL_ALERT
+}
+
 model User {
   id String @id @default(uuid()) @db.Uuid
   email String @unique
@@ -140,6 +172,8 @@ model User {
   orders Order[]
   reservations Reservation[]
   auditLogs AuditLog[]
+  notifications Notification[]
+  notificationPreference NotificationPreference?
   @@index([status])
   @@index([role])
 }
@@ -458,6 +492,42 @@ model AuditLog {
   actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
   @@index([actorId, createdAt])
   @@index([resourceType, resourceId, createdAt])
+}
+
+model Notification {
+  id String @id @default(uuid()) @db.Uuid
+  eventId String
+  recipientId String @db.Uuid
+  type NotificationType
+  channel NotificationChannel
+  title String
+  body String
+  status NotificationDeliveryStatus @default(PENDING)
+  metadata Json?
+  createdAt DateTime @default(now())
+  sentAt DateTime?
+  readAt DateTime?
+  processedAt DateTime?
+  deliveryAttempts Int @default(0)
+  nextAttemptAt DateTime?
+  lastError String?
+  recipient User @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  @@unique([eventId, recipientId, type, channel])
+  @@index([recipientId, channel, createdAt])
+  @@index([status, nextAttemptAt])
+}
+
+model NotificationPreference {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @unique @db.Uuid
+  emailNotifications Boolean @default(true)
+  smsNotifications Boolean @default(false)
+  pushNotifications Boolean @default(false)
+  whatsappNotifications Boolean @default(false)
+  marketingNotifications Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
