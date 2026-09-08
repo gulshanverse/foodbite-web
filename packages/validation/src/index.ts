@@ -24,6 +24,8 @@ export type MarketplaceQuery = z.infer<typeof marketplaceQuerySchema>;
 export const cartItemSchema = z.object({ listingId: z.string().uuid(), quantity: z.number().int().positive().max(99) });
 export const cartUpdateSchema = z.object({ quantity: z.number().int().positive().max(99) });
 export const checkoutSchema = z.object({ idempotencyKey: z.string().trim().min(16).max(128) });
+export const addressSchema = z.object({ label: z.string().trim().min(1).max(40), recipientName: z.string().trim().min(2).max(120), phone: z.string().trim().max(30).optional(), addressLine1: z.string().trim().min(3).max(200), addressLine2: z.string().trim().max(200).optional(), locality: z.string().trim().max(100).optional(), city: z.string().trim().min(2).max(80), state: z.string().trim().min(2).max(80), postalCode: z.string().regex(/^\d{6}$/), latitude: z.number().min(-90).max(90).optional(), longitude: z.number().min(-180).max(180).optional() });
+export const fulfillmentSchema = z.object({ method: z.enum(["PICKUP", "DELIVERY"]), addressId: z.string().uuid().optional() }).superRefine((value, ctx) => { if (value.method === "DELIVERY" && !value.addressId) ctx.addIssue({ code: "custom", path: ["addressId"], message: "A delivery address is required." }); });
 export const orderTransitionSchema = z.object({ status: z.enum(["CONFIRMED", "PREPARING", "READY_FOR_PICKUP"]) });
 export const cancellationSchema = z.object({ reason: z.string().trim().max(500).optional() });
 export const pickupVerificationSchema = z.object({ pickupCode: z.string().regex(/^\d{6}$/) });

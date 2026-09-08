@@ -119,6 +119,28 @@ enum PickupStatus {
   CANCELLED
 }
 
+enum FulfillmentMethod {
+  PICKUP
+  DELIVERY
+}
+
+enum DeliveryStatus {
+  PENDING
+  ASSIGNED
+  PICKED_UP_FROM_SELLER
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  FAILED
+  CANCELLED
+}
+
+enum DeliveryProviderMode {
+  FOODBITE
+  SELLER
+  THIRD_PARTY
+}
+
 enum NotificationChannel {
   IN_APP
   EMAIL
@@ -149,6 +171,11 @@ enum NotificationType {
   REFUND_COMPLETED
   NEW_SELLER_ORDER
   OPERATIONAL_ALERT
+  DELIVERY_ASSIGNED
+  DELIVERY_IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERY_DELIVERED
+  DELIVERY_FAILED
 }
 
 model User {
@@ -174,6 +201,7 @@ model User {
   auditLogs AuditLog[]
   notifications Notification[]
   notificationPreference NotificationPreference?
+  addresses Address[]
   @@index([status])
   @@index([role])
 }
@@ -226,6 +254,10 @@ model Business {
   pincode String?
   latitude Decimal? @db.Decimal(9, 6)
   longitude Decimal? @db.Decimal(9, 6)
+  deliveryAvailable Boolean @default(false)
+  deliveryRadiusKm Decimal? @db.Decimal(6, 2)
+  deliveryBaseFee Int @default(0)
+  deliveryPerKmFee Int @default(0)
   fssaiNumber String?
   fssaiDocumentUrl String?
   verificationStatus SellerVerificationStatus @default(PENDING)
@@ -367,7 +399,9 @@ model Order {
   orderNumber String @unique
   buyerId String @db.Uuid
   status OrderStatus @default(PENDING_PAYMENT)
+  fulfillmentMethod FulfillmentMethod @default(PICKUP)
   subtotal Int
+  deliveryFee Int @default(0)
   totalAmount Int
   currency String @default("INR")
   buyerName String
@@ -384,8 +418,56 @@ model Order {
   items OrderItem[]
   payment Payment?
   pickup Pickup?
+  delivery Delivery?
   reservations Reservation[]
   @@index([buyerId, createdAt])
+  @@index([status, createdAt])
+}
+
+model Address {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  label String
+  recipientName String
+  phone String?
+  addressLine1 String
+  addressLine2 String?
+  locality String?
+  city String
+  state String
+  postalCode String
+  latitude Decimal? @db.Decimal(9, 6)
+  longitude Decimal? @db.Decimal(9, 6)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, updatedAt])
+}
+
+model Delivery {
+  id String @id @default(uuid()) @db.Uuid
+  orderId String @unique @db.Uuid
+  providerMode DeliveryProviderMode
+  providerReference String?
+  status DeliveryStatus @default(PENDING)
+  recipientName String
+  phone String?
+  addressLine1 String
+  addressLine2 String?
+  locality String?
+  city String
+  state String
+  postalCode String
+  latitude Decimal? @db.Decimal(9, 6)
+  longitude Decimal? @db.Decimal(9, 6)
+  assignedAt DateTime?
+  pickedUpAt DateTime?
+  deliveredAt DateTime?
+  failedAt DateTime?
+  failureReason String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
   @@index([status, createdAt])
 }
 

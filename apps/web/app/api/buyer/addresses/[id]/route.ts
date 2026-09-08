@@ -1,0 +1,6 @@
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+import { deleteBuyerAddress, updateBuyerAddress } from "@/lib/delivery-domain";
+async function buyer() { const user = await getCurrentUser(); return user?.role === "BUYER" && user.status === "ACTIVE" ? user : null; }
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) { const user = await buyer(); if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 }); try { const { id } = await params; return NextResponse.json({ address: await updateBuyerAddress(user.id, id, await request.json()) }); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Address not found." }, { status: 404 }); } }
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) { const user = await buyer(); if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 }); try { const { id } = await params; await deleteBuyerAddress(user.id, id); return new NextResponse(null, { status: 204 }); } catch { return NextResponse.json({ error: "Address not found." }, { status: 404 }); } }

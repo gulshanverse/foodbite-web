@@ -24,6 +24,11 @@ function template(type: NotificationType, payload: EventPayload) {
     case "REFUND_COMPLETED": return { title: "Refund completed", body: `Your refund for order ${payload.orderNumber} has been processed.` };
     case "NEW_SELLER_ORDER": return { title: "New paid order", body: `A new paid order ${payload.orderNumber} requires your attention${payload.itemSummary ? `: ${payload.itemSummary}` : "."}` };
     case "OPERATIONAL_ALERT": return { title: "FoodBite operational alert", body: `There is an operational update related to order ${payload.orderNumber}.` };
+    case "DELIVERY_ASSIGNED": return { title: "Delivery assigned", body: `A delivery provider has been assigned to order ${payload.orderNumber}.` };
+    case "DELIVERY_IN_TRANSIT": return { title: "Delivery in transit", body: `Order ${payload.orderNumber} is in transit. Live tracking is unavailable.` };
+    case "OUT_FOR_DELIVERY": return { title: "Out for delivery", body: `Order ${payload.orderNumber} is out for delivery.` };
+    case "DELIVERY_DELIVERED": return { title: "Delivery completed", body: `Order ${payload.orderNumber} has been delivered.` };
+    case "DELIVERY_FAILED": return { title: "Delivery update", body: `Delivery for order ${payload.orderNumber} needs attention.` };
   }
 }
 

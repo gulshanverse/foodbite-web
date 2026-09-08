@@ -43,7 +43,7 @@ export async function reserveListing(userId: string, listingId: string, quantity
   return prisma.$transaction(async (tx) => { const now = new Date(); await expireReservations(tx, now); const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`SELECT "id" FROM "Inventory" WHERE "listingId" = ${listingId}::uuid FOR UPDATE`); if (!rows.length) throw new Error("Inventory not found."); const listing = await tx.foodListing.findFirst({ where: { id: listingId, status: "ACTIVE", pickupEnd: { gt: now }, seller: { user: { status: "ACTIVE" } } }, include: { inventory: true } }); if (!listing?.inventory || listing.inventory.availableQuantity < quantity) throw new Error("Not enough surplus available."); await tx.inventory.update({ where: { listingId }, data: { availableQuantity: { decrement: quantity }, reservedQuantity: { increment: quantity }, version: { increment: 1 } } }); return tx.reservation.create({ data: { userId, listingId, quantity, expiresAt: new Date(now.getTime() + RESERVATION_MINUTES * 60_000) } }); }, { isolationLevel: "Serializable" });
 }
 
-export async function createOrderFromCart(userId: string) {
+export async function createOrderFromCart(userId: string, fulfillment: { method?: "PICKUP" | "DELIVERY"; addressId?: string } = {}) {
   const result = await prisma.$transaction(async (tx) => {
     const now = new Date(); await expireReservations(tx, now);
     const buyer = await tx.user.findFirst({ where: { id: userId, role: "BUYER", status: "ACTIVE", deletedAt: null }, include: { buyerProfile: true, cart: { include: { items: { include: { listing: { include: { inventory: true, seller: { include: { business: true } } } } } } } } } });
@@ -56,8 +56,25 @@ export async function createOrderFromCart(userId: string) {
       const reservation = await tx.reservation.create({ data: { userId, listingId: listing.id, quantity: cartItem.quantity, status: "ACTIVE", expiresAt: new Date(now.getTime() + RESERVATION_MINUTES * 60_000) } }); reservations.push({ id: reservation.id });
       items.push({ listingId: listing.id, sellerId: listing.sellerId, listingName: listing.name, unit: listing.unit, foodType: listing.foodType, quantity: cartItem.quantity, unitPrice: listing.sellingPrice, originalUnitPrice: listing.originalPrice, lineTotal: listing.sellingPrice * cartItem.quantity });
     }
+    const method = fulfillment.method ?? "PICKUP";
+    const business = buyer.cart.items[0]?.listing.seller.business;
+    let deliveryFee = 0;
+    let deliveryData: Record<string, unknown> | undefined;
+    if (method === "DELIVERY") {
+      if (buyer.cart.items.some((item) => item.listing.seller.businessId !== business?.id)) throw new Error("Delivery checkout must contain one business.");
+      if (!fulfillment.addressId) throw new Error("A delivery address is required.");
+      if (!business?.deliveryAvailable || business.latitude == null || business.longitude == null || business.deliveryRadiusKm == null) throw new Error("Delivery is unavailable for this business.");
+      const address = await tx.address.findFirst({ where: { id: fulfillment.addressId, userId } });
+      if (!address) throw new Error("Delivery address not found.");
+      if (address.latitude == null || address.longitude == null) throw new Error("Delivery address requires coordinates.");
+      const { haversineKm, calculateDeliveryFee } = await import("@/lib/delivery-domain");
+      const distanceKm = haversineKm(Number(business.latitude), Number(business.longitude), Number(address.latitude), Number(address.longitude));
+      if (distanceKm > Number(business.deliveryRadiusKm)) throw new Error("Delivery address is outside the supported area.");
+      deliveryFee = calculateDeliveryFee(business.deliveryBaseFee, business.deliveryPerKmFee, distanceKm);
+      deliveryData = { create: { providerMode: "SELLER", recipientName: address.recipientName, phone: address.phone, addressLine1: address.addressLine1, addressLine2: address.addressLine2, locality: address.locality, city: address.city, state: address.state, postalCode: address.postalCode, latitude: address.latitude, longitude: address.longitude } };
+    }
     const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0); const secrets = createPickupSecrets();
-    const order = await tx.order.create({ data: { orderNumber: orderNumber(), buyerId: userId, subtotal, totalAmount: subtotal, buyerName: buyer.buyerProfile?.name ?? buyer.email, buyerPhone: buyer.phone, pickupCity: buyer.buyerProfile?.city, pickupPincode: buyer.buyerProfile?.pincode, items: { create: items }, reservations: { connect: reservations }, payment: { create: { provider: process.env.PAYMENT_PROVIDER ?? "razorpay", amount: subtotal, currency: "INR", status: "CREATED" } }, pickup: { create: { status: "PENDING", pickupCodeHash: secrets.codeHash, pickupCodeLast4: secrets.code.slice(-4), qrTokenHash: secrets.tokenHash } } }, include: { items: true, payment: true, pickup: true } });
+    const order = await tx.order.create({ data: { orderNumber: orderNumber(), buyerId: userId, fulfillmentMethod: method, subtotal, deliveryFee, totalAmount: subtotal + deliveryFee, buyerName: buyer.buyerProfile?.name ?? buyer.email, buyerPhone: buyer.phone, pickupCity: buyer.buyerProfile?.city, pickupPincode: buyer.buyerProfile?.pincode, items: { create: items }, reservations: { connect: reservations }, payment: { create: { provider: process.env.PAYMENT_PROVIDER ?? "razorpay", amount: subtotal + deliveryFee, currency: "INR", status: "CREATED" } }, ...(method === "PICKUP" ? { pickup: { create: { status: "PENDING", pickupCodeHash: secrets.codeHash, pickupCodeLast4: secrets.code.slice(-4), qrTokenHash: secrets.tokenHash } } } : { delivery: deliveryData }) }, include: { items: true, payment: true, pickup: true, delivery: true } });
     await tx.cartItem.deleteMany({ where: { cartId: buyer.cart.id } }); return { order, pickupCode: secrets.code, qrToken: secrets.token };
   }, { isolationLevel: "Serializable" });
   dispatchOrderNotification(result.order.id, "ORDER_CREATED");
@@ -84,6 +101,6 @@ export async function markPaymentFailed(providerOrderId: string, failureReason: 
   dispatchOrderNotification(result.orderId, "PAYMENT_FAILED");
   return result;
 }
-export async function getBuyerOrders(userId: string) { return prisma.order.findMany({ where: { buyerId: userId }, orderBy: { createdAt: "desc" }, include: { items: true, payment: true, pickup: true } }); }
-export async function getBuyerOrder(userId: string, id: string) { return prisma.order.findFirst({ where: { id, buyerId: userId }, include: { items: { include: { listing: { include: { images: { orderBy: { sortOrder: "asc" } } } }, seller: { include: { business: true } } } }, payment: true, pickup: true } }); }
+export async function getBuyerOrders(userId: string) { return prisma.order.findMany({ where: { buyerId: userId }, orderBy: { createdAt: "desc" }, include: { items: true, payment: true, pickup: true, delivery: true } }); }
+export async function getBuyerOrder(userId: string, id: string) { return prisma.order.findFirst({ where: { id, buyerId: userId }, include: { items: { include: { listing: { include: { images: { orderBy: { sortOrder: "asc" } } } }, seller: { include: { business: true } } } }, payment: true, pickup: true, delivery: true } }); }
 export async function cancelBuyerOrder(userId: string, id: string) { const order = await prisma.$transaction(async (tx) => { const order = await tx.order.findFirst({ where: { id, buyerId: userId }, include: { reservations: true } }); if (!order || order.status !== "PENDING_PAYMENT") throw new Error("Only unpaid orders can be cancelled here."); for (const reservation of order.reservations) if (reservation.status === "ACTIVE") { await tx.inventory.update({ where: { listingId: reservation.listingId }, data: { availableQuantity: { increment: reservation.quantity }, reservedQuantity: { decrement: reservation.quantity }, version: { increment: 1 } } }); await tx.reservation.update({ where: { id: reservation.id }, data: { status: "CANCELLED" } }); } await tx.pickup.updateMany({ where: { orderId: id }, data: { status: "CANCELLED" } }); return tx.order.update({ where: { id }, data: { status: "CANCELLED", cancelledAt: new Date() } }); }); dispatchOrderNotification(order.id, "ORDER_CANCELLED"); return order; }
