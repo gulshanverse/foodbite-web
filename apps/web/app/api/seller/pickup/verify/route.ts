@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { hashSecret } from "@/lib/order-domain";
 import { prisma } from "@/lib/prisma";
+import { recordAuditEvent } from "@/lib/audit";
 
 const schema = z.object({ orderId: z.string().uuid(), code: z.string().regex(/^\d{6}$/) });
 
@@ -13,13 +14,13 @@ export async function POST(request: Request) {
   if (!profile) return NextResponse.json({ error: "Seller profile not found." }, { status: 403 });
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid pickup code." }, { status: 400 });
-  const pickup = await prisma.pickup.findFirst({ where: { orderId: parsed.data.orderId, order: { items: { some: { sellerId: profile.id } }, status: { in: ["PAID", "CONFIRMED", "PREPARING", "READY_FOR_PICKUP"] } } } });
-  if (!pickup || pickup.pickupCodeHash !== hashSecret(parsed.data.code)) return NextResponse.json({ error: "Pickup code does not match." }, { status: 400 });
   const updated = await prisma.$transaction(async (tx) => {
-    const current = await tx.order.findUnique({ where: { id: parsed.data.orderId } });
-    if (!current || current.status === "PICKED_UP" || current.status === "COMPLETED") throw new Error("Order has already been picked up.");
-    await tx.pickup.update({ where: { id: pickup.id }, data: { status: "PICKED_UP", pickedUpAt: new Date() } });
-    return tx.order.update({ where: { id: current.id }, data: { status: "PICKED_UP" } });
+    const pickup = await tx.pickup.findFirst({ where: { orderId: parsed.data.orderId, status: "READY", pickupCodeHash: hashSecret(parsed.data.code), order: { items: { some: { sellerId: profile.id } }, status: "READY_FOR_PICKUP" } } });
+    if (!pickup) throw new Error("Pickup code does not match or pickup is not ready.");
+    const changed = await tx.pickup.updateMany({ where: { id: pickup.id, status: "READY" }, data: { status: "PICKED_UP", pickedUpAt: new Date() } });
+    if (changed.count !== 1) throw new Error("Pickup has already been completed.");
+    return tx.order.update({ where: { id: parsed.data.orderId }, data: { status: "PICKED_UP" } });
   });
+  await recordAuditEvent({ actorId: user.id, action: "PICKUP_VERIFIED", resourceType: "Order", resourceId: parsed.data.orderId, metadata: { outcome: "success" } });
   return NextResponse.json({ order: updated });
 }

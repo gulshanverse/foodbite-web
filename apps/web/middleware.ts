@@ -13,7 +13,7 @@ export async function middleware(request: NextRequest) {
   const role = String(token.role);
   if (pathname.startsWith("/buyer") && role !== "BUYER") return NextResponse.redirect(new URL("/forbidden", request.url));
   if (pathname.startsWith("/seller") && role !== "SELLER") return NextResponse.redirect(new URL("/forbidden", request.url));
-  if (pathname.startsWith("/admin") && role !== "ADMIN") return NextResponse.redirect(new URL("/forbidden", request.url));
+  if (pathname.startsWith("/admin") && !["ADMIN", "MODERATOR", "SUPPORT", "SUPER_ADMIN"].includes(role)) return NextResponse.redirect(new URL("/forbidden", request.url));
   return NextResponse.next();
 }
 

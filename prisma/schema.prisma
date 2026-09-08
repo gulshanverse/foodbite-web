@@ -139,6 +139,7 @@ model User {
   cart Cart?
   orders Order[]
   reservations Reservation[]
+  auditLogs AuditLog[]
   @@index([status])
   @@index([role])
 }
@@ -444,6 +445,19 @@ model Session {
   expires DateTime
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId])
+}
+
+model AuditLog {
+  id String @id @default(uuid()) @db.Uuid
+  actorId String? @db.Uuid
+  action String
+  resourceType String
+  resourceId String
+  metadata Json?
+  createdAt DateTime @default(now())
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  @@index([actorId, createdAt])
+  @@index([resourceType, resourceId, createdAt])
 }
 
 model VerificationToken {

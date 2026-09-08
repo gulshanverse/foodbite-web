@@ -8,19 +8,22 @@ function required(name: string) {
   return value;
 }
 
+function authHeader() { return `Basic ${Buffer.from(`${required("PAYMENT_KEY_ID")}:${required("PAYMENT_KEY_SECRET")}`).toString("base64")}`; }
+
 export async function createGatewayOrder(input: PaymentOrder) {
   const provider = process.env.PAYMENT_PROVIDER ?? "razorpay";
   if (provider !== "razorpay") throw new Error(`Unsupported payment provider: ${provider}`);
-  const keyId = required("PAYMENT_KEY_ID");
-  const keySecret = required("PAYMENT_KEY_SECRET");
-  const response = await fetch("https://api.razorpay.com/v1/orders", {
-    method: "POST",
-    headers: { Authorization: `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString("base64")}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ amount: input.amount, currency: input.currency, receipt: input.id, notes: { orderId: input.id } }),
-    cache: "no-store",
-  });
+  const response = await fetch("https://api.razorpay.com/v1/orders", { method: "POST", headers: { Authorization: authHeader(), "Content-Type": "application/json" }, body: JSON.stringify({ amount: input.amount, currency: input.currency, receipt: input.id, notes: { orderId: input.id } }), cache: "no-store" });
   if (!response.ok) throw new Error("Payment gateway order creation failed.");
   return response.json() as Promise<{ id: string; amount: number; currency: string; status: string }>;
+}
+
+export async function refundGatewayPayment(providerPaymentId: string, amount: number) {
+  const provider = process.env.PAYMENT_PROVIDER ?? "razorpay";
+  if (provider !== "razorpay") throw new Error(`Unsupported payment provider: ${provider}`);
+  const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(providerPaymentId)}/refund`, { method: "POST", headers: { Authorization: authHeader(), "Content-Type": "application/json" }, body: JSON.stringify({ amount }), cache: "no-store" });
+  if (!response.ok) throw new Error("Payment gateway refund failed.");
+  return response.json() as Promise<{ id: string; status: string; amount: number }>;
 }
 
 export function verifyCheckoutSignature(orderId: string, paymentId: string, signature: string) {
