@@ -8,7 +8,8 @@ export type Permission =
   | "ACCOUNT_SUSPEND"
   | "ORDER_SUPPORT"
   | "REFUND_MANAGE"
-  | "AUDIT_READ";
+  | "AUDIT_READ"
+  | "NGO_VERIFY";
 
 const permissions: Record<Permission, UserRole[]> = {
   LISTING_MODERATE: ["MODERATOR", "ADMIN", "SUPER_ADMIN"],
@@ -17,6 +18,7 @@ const permissions: Record<Permission, UserRole[]> = {
   ORDER_SUPPORT: ["SUPPORT", "ADMIN", "SUPER_ADMIN"],
   REFUND_MANAGE: ["SUPPORT", "ADMIN", "SUPER_ADMIN"],
   AUDIT_READ: ["ADMIN", "SUPER_ADMIN"],
+  NGO_VERIFY: ["ADMIN", "SUPER_ADMIN"],
 };
 
 export function canAccessRole(userRole: UserRole, allowedRoles: UserRole[]) { return allowedRoles.includes(userRole); }

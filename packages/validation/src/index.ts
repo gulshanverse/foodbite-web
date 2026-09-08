@@ -1,5 +1,5 @@
 import { z } from "zod";
-export const signupSchema = z.object({ name: z.string().trim().min(2).max(80), email: z.string().trim().email().max(320), password: z.string().min(8).max(128), role: z.enum(["BUYER", "SELLER"]) });
+export const signupSchema = z.object({ name: z.string().trim().min(2).max(80), email: z.string().trim().email().max(320), password: z.string().min(8).max(128), role: z.enum(["BUYER", "SELLER", "NGO"]) });
 export const loginSchema = z.object({ email: z.string().trim().email().max(320), password: z.string().min(1).max(128) });
 export const buyerProfileSchema = z.object({ name: z.string().trim().min(2).max(80), city: z.string().trim().max(80).optional(), state: z.string().trim().max(80).optional(), pincode: z.string().regex(/^\d{6}$/).optional() });
 export const sellerProfileSchema = z.object({ trustScore: z.never().optional() });
@@ -26,6 +26,9 @@ export const cartUpdateSchema = z.object({ quantity: z.number().int().positive()
 export const checkoutSchema = z.object({ idempotencyKey: z.string().trim().min(16).max(128) });
 export const addressSchema = z.object({ label: z.string().trim().min(1).max(40), recipientName: z.string().trim().min(2).max(120), phone: z.string().trim().max(30).optional(), addressLine1: z.string().trim().min(3).max(200), addressLine2: z.string().trim().max(200).optional(), locality: z.string().trim().max(100).optional(), city: z.string().trim().min(2).max(80), state: z.string().trim().min(2).max(80), postalCode: z.string().regex(/^\d{6}$/), latitude: z.number().min(-90).max(90).optional(), longitude: z.number().min(-180).max(180).optional() });
 export const fulfillmentSchema = z.object({ method: z.enum(["PICKUP", "DELIVERY"]), addressId: z.string().uuid().optional() }).superRefine((value, ctx) => { if (value.method === "DELIVERY" && !value.addressId) ctx.addIssue({ code: "custom", path: ["addressId"], message: "A delivery address is required." }); });
+export const ngoProfileSchema = z.object({ organizationName: z.string().trim().min(2).max(160), contactPerson: z.string().trim().min(2).max(120), phone: z.string().trim().max(30).optional(), description: z.string().trim().max(2000).optional(), serviceArea: z.string().trim().max(160).optional(), address: z.string().trim().max(300).optional(), operatingHours: z.string().trim().max(160).optional() });
+export const donationSchema = z.object({ listingId: z.string().uuid(), quantity: z.number().int().positive().max(100000) });
+export const donationReservationSchema = z.object({ quantity: z.number().int().positive().max(100000) });
 export const orderTransitionSchema = z.object({ status: z.enum(["CONFIRMED", "PREPARING", "READY_FOR_PICKUP"]) });
 export const cancellationSchema = z.object({ reason: z.string().trim().max(500).optional() });
 export const pickupVerificationSchema = z.object({ pickupCode: z.string().regex(/^\d{6}$/) });

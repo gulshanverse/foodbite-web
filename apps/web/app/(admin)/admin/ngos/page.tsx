@@ -1,0 +1,3 @@
+import { requirePermission } from "@/lib/authorization";
+import { redirect } from "next/navigation";
+export default async function AdminNgoPage() { const gate = await requirePermission("NGO_VERIFY"); if (!gate.user) redirect("/login"); if (gate.response) redirect("/forbidden"); return <main className="mx-auto max-w-5xl px-6 py-12"><p className="text-sm font-semibold uppercase tracking-[.18em] text-[#e85d3f]">Admin operations</p><h1 className="mt-3 text-4xl font-bold text-[#173f3b]">NGO verification</h1><p className="mt-4 max-w-2xl text-[#55706c]">NGO profiles are pending until an authorized administrator reviews and verifies them. Verification actions are recorded in the audit log.</p></main>; }

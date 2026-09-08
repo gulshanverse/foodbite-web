@@ -29,6 +29,14 @@ function template(type: NotificationType, payload: EventPayload) {
     case "OUT_FOR_DELIVERY": return { title: "Out for delivery", body: `Order ${payload.orderNumber} is out for delivery.` };
     case "DELIVERY_DELIVERED": return { title: "Delivery completed", body: `Order ${payload.orderNumber} has been delivered.` };
     case "DELIVERY_FAILED": return { title: "Delivery update", body: `Delivery for order ${payload.orderNumber} needs attention.` };
+    case "DONATION_AVAILABLE": return { title: "Donation available", body: `A new surplus food donation ${payload.orderNumber} is available for recovery.` };
+    case "DONATION_RESERVED": return { title: "Donation reserved", body: `Donation ${payload.orderNumber} has been reserved.` };
+    case "DONATION_ACCEPTED": return { title: "Donation accepted", body: `Donation ${payload.orderNumber} has been accepted for recovery.` };
+    case "DONATION_READY": return { title: "Donation ready", body: `Donation ${payload.orderNumber} is ready for collection.` };
+    case "DONATION_COLLECTED": return { title: "Donation collected", body: `Donation ${payload.orderNumber} has been collected.` };
+    case "DONATION_COMPLETED": return { title: "Recovery completed", body: `Recovery for donation ${payload.orderNumber} is complete.` };
+    case "DONATION_CANCELLED": return { title: "Donation cancelled", body: `Donation ${payload.orderNumber} was cancelled.` };
+    case "DONATION_EXPIRED": return { title: "Donation expired", body: `Donation ${payload.orderNumber} is no longer available.` };
   }
 }
 

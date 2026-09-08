@@ -141,6 +141,26 @@ enum DeliveryProviderMode {
   THIRD_PARTY
 }
 
+enum DonationStatus {
+  DRAFT
+  AVAILABLE
+  RESERVED
+  ACCEPTED
+  READY_FOR_PICKUP
+  COLLECTED
+  COMPLETED
+  CANCELLED
+  EXPIRED
+  FAILED_COLLECTION
+}
+
+enum DonationReservationStatus {
+  ACTIVE
+  CANCELLED
+  COLLECTED
+  EXPIRED
+}
+
 enum NotificationChannel {
   IN_APP
   EMAIL
@@ -176,6 +196,14 @@ enum NotificationType {
   OUT_FOR_DELIVERY
   DELIVERY_DELIVERED
   DELIVERY_FAILED
+  DONATION_AVAILABLE
+  DONATION_RESERVED
+  DONATION_ACCEPTED
+  DONATION_READY
+  DONATION_COLLECTED
+  DONATION_COMPLETED
+  DONATION_CANCELLED
+  DONATION_EXPIRED
 }
 
 model User {
@@ -202,6 +230,7 @@ model User {
   notifications Notification[]
   notificationPreference NotificationPreference?
   addresses Address[]
+  ngoProfile NGOProfile?
   @@index([status])
   @@index([role])
 }
@@ -238,6 +267,7 @@ model SellerProfile {
   business Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
   listings FoodListing[]
   orderItems OrderItem[]
+  donations Donation[]
   @@index([businessId])
 }
 
@@ -264,6 +294,24 @@ model Business {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   sellers SellerProfile[]
+}
+
+model NGOProfile {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @unique @db.Uuid
+  organizationName String
+  contactPerson String
+  phone String?
+  description String?
+  serviceArea String?
+  address String?
+  operatingHours String?
+  verificationStatus SellerVerificationStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reservations DonationReservation[]
+  @@index([verificationStatus])
 }
 
 model FoodCategory {
@@ -310,6 +358,7 @@ model FoodListing {
   cartItems CartItem[]
   orderItems OrderItem[]
   reservations Reservation[]
+  donation Donation?
   @@index([sellerId])
   @@index([categoryId])
   @@index([status])
@@ -325,6 +374,7 @@ model Inventory {
   availableQuantity Int
   reservedQuantity Int @default(0)
   soldQuantity Int @default(0)
+  donatedQuantity Int @default(0)
   version Int @default(1)
   updatedAt DateTime @updatedAt
   listing FoodListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
@@ -469,6 +519,42 @@ model Delivery {
   updatedAt DateTime @updatedAt
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
   @@index([status, createdAt])
+}
+
+model Donation {
+  id String @id @default(uuid()) @db.Uuid
+  listingId String @unique @db.Uuid
+  sellerId String @db.Uuid
+  status DonationStatus @default(DRAFT)
+  quantity Int
+  availableQuantity Int
+  reservedQuantity Int @default(0)
+  collectedQuantity Int @default(0)
+  pickupCodeHash String? @unique
+  pickupCodeLast4 String?
+  qrTokenHash String? @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime
+  listing FoodListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  seller SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  reservations DonationReservation[]
+  @@index([status, expiresAt])
+  @@index([sellerId, createdAt])
+}
+
+model DonationReservation {
+  id String @id @default(uuid()) @db.Uuid
+  donationId String @db.Uuid
+  ngoId String @db.Uuid
+  quantity Int
+  status DonationReservationStatus @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  donation Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
+  ngo NGOProfile @relation(fields: [ngoId], references: [id], onDelete: Restrict)
+  @@unique([donationId, ngoId])
+  @@index([ngoId, status, createdAt])
 }
 
 model OrderItem {

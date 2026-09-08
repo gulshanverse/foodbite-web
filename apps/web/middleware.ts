@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
-const protectedPrefixes = ["/buyer", "/seller", "/admin", "/account"];
+const protectedPrefixes = ["/buyer", "/seller", "/admin", "/ngo", "/account"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -13,8 +13,9 @@ export async function middleware(request: NextRequest) {
   const role = String(token.role);
   if (pathname.startsWith("/buyer") && role !== "BUYER") return NextResponse.redirect(new URL("/forbidden", request.url));
   if (pathname.startsWith("/seller") && role !== "SELLER") return NextResponse.redirect(new URL("/forbidden", request.url));
+  if (pathname.startsWith("/ngo") && role !== "NGO") return NextResponse.redirect(new URL("/forbidden", request.url));
   if (pathname.startsWith("/admin") && !["ADMIN", "MODERATOR", "SUPPORT", "SUPER_ADMIN"].includes(role)) return NextResponse.redirect(new URL("/forbidden", request.url));
   return NextResponse.next();
 }
 
-export const config = { matcher: ["/buyer/:path*", "/seller/:path*", "/admin/:path*", "/account/:path*"] };
+export const config = { matcher: ["/buyer/:path*", "/seller/:path*", "/admin/:path*", "/ngo/:path*", "/account/:path*"] };

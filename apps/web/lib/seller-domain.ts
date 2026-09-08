@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export function slugify(value: string) { return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "surplus-listing"; }
 export function calculateDiscount(originalPrice: number, sellingPrice: number) { return originalPrice <= 0 ? 0 : Math.round(((originalPrice - sellingPrice) / originalPrice) * 100); }
-export function assertInventoryInvariant(total: number, available: number, reserved: number, sold: number) { if (total !== available + reserved + sold || [total, available, reserved, sold].some((value) => value < 0)) throw new Error("Inventory invariant violated"); }
+export function assertInventoryInvariant(total: number, available: number, reserved: number, sold: number, donated = 0) { if (total !== available + reserved + sold + donated || [total, available, reserved, sold, donated].some((value) => value < 0)) throw new Error("Inventory invariant violated"); }
 
 const allowedTransitions: Record<ListingStatus, ListingStatus[]> = { DRAFT: ["PENDING_REVIEW", "ACTIVE", "CANCELLED"], PENDING_REVIEW: ["ACTIVE", "CANCELLED"], ACTIVE: ["PAUSED", "SOLD_OUT", "EXPIRED", "CANCELLED"], PAUSED: ["ACTIVE", "CANCELLED", "EXPIRED"], SOLD_OUT: [], EXPIRED: [], BLOCKED: [], CANCELLED: [] };
 export function canTransitionListing(from: ListingStatus, to: ListingStatus) { return allowedTransitions[from].includes(to); }
@@ -46,10 +46,10 @@ export async function adjustOwnedInventory(userId: string, listingId: string, in
   return prisma.$transaction(async (tx) => {
     const listing = await tx.foodListing.findFirst({ where: { id: listingId, sellerId: seller.id }, include: { inventory: true } });
     if (!listing?.inventory) throw new Error("Inventory not found");
-    const { reservedQuantity, soldQuantity } = listing.inventory;
-    const availableQuantity = parsed.totalQuantity - reservedQuantity - soldQuantity;
+    const { reservedQuantity, soldQuantity, donatedQuantity } = listing.inventory;
+    const availableQuantity = parsed.totalQuantity - reservedQuantity - soldQuantity - donatedQuantity;
     if (availableQuantity < 0) throw new Error("Total quantity cannot be below reserved and sold quantity");
-    assertInventoryInvariant(parsed.totalQuantity, availableQuantity, reservedQuantity, soldQuantity);
+    assertInventoryInvariant(parsed.totalQuantity, availableQuantity, reservedQuantity, soldQuantity, donatedQuantity);
     return tx.inventory.update({ where: { listingId }, data: { totalQuantity: parsed.totalQuantity, availableQuantity, version: { increment: 1 } } });
   });
 }
