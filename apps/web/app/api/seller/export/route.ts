@@ -1,0 +1,4 @@
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+import { exportOwnedOperationalData } from "@/lib/seller-operations-domain";
+export async function GET(request: Request) { const user = await getCurrentUser(); if (!user || user.role !== "SELLER" || user.status !== "ACTIVE") return NextResponse.json({ error: "Forbidden." }, { status: 403 }); const kind = new URL(request.url).searchParams.get("kind"); if (kind !== "listings" && kind !== "inventory" && kind !== "orders") return NextResponse.json({ error: "Invalid export type." }, { status: 400 }); try { const csv = await exportOwnedOperationalData(user.id, kind); return new NextResponse(csv, { headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="foodbite-${kind}.csv"`, "cache-control": "no-store" } }); } catch { return NextResponse.json({ error: "Export could not be generated." }, { status: 400 }); } }

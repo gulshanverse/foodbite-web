@@ -285,6 +285,7 @@ model Business {
   latitude Decimal? @db.Decimal(9, 6)
   longitude Decimal? @db.Decimal(9, 6)
   deliveryAvailable Boolean @default(false)
+  pickupAvailable Boolean @default(true)
   deliveryRadiusKm Decimal? @db.Decimal(6, 2)
   deliveryBaseFee Int @default(0)
   deliveryPerKmFee Int @default(0)
@@ -294,6 +295,20 @@ model Business {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   sellers SellerProfile[]
+  operatingHours BusinessOperatingHour[]
+}
+
+model BusinessOperatingHour {
+  id String @id @default(uuid()) @db.Uuid
+  businessId String @db.Uuid
+  dayOfWeek Int
+  openTime String
+  closeTime String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  @@unique([businessId, dayOfWeek, openTime, closeTime])
+  @@index([businessId, dayOfWeek])
 }
 
 model NGOProfile {

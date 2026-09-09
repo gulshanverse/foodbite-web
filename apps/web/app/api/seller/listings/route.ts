@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { createListing } from "@/lib/seller-domain";
+import { listOwnedListings } from "@/lib/seller-operations-domain";
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   if (user.role !== "SELLER") return NextResponse.json({ error: "Forbidden." }, { status: 403 });
-  const seller = await prisma.sellerProfile.findUnique({ where: { userId: user.id }, select: { id: true } });
-  if (!seller) return NextResponse.json({ listings: [] });
-  const listings = await prisma.foodListing.findMany({ where: { sellerId: seller.id }, include: { category: true, inventory: true, images: { orderBy: { sortOrder: "asc" } } }, orderBy: { createdAt: "desc" }, take: 50 });
-  return NextResponse.json({ listings });
+  return NextResponse.json(await listOwnedListings(user.id, Object.fromEntries(new URL(request.url).searchParams)));
 }
 
 export async function POST(request: Request) {
