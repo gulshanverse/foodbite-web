@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["DATABASE_URL", "AUTH_SECRET", "CRON_SECRET", "NEXT_PUBLIC_APP_URL"],
   "tasks": {
     "build": {"dependsOn": ["^build"], "outputs": [".next/**"]},
     "lint": {},
