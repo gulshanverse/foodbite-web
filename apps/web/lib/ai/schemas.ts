@@ -1,0 +1,7 @@
+import { z } from "zod";
+export const listingAssistantSchema = z.object({ title: z.string().trim().min(2).max(160), description: z.string().trim().max(2000), packagingInfo: z.string().trim().max(1000), allergenPrompt: z.string().trim().max(500), foodType: z.enum(["VEGETARIAN", "NON_VEGETARIAN", "VEGAN", "JAIN", "OTHER"]), listingType: z.enum(["EXACT", "SURPRISE_BOX"]), keywords: z.array(z.string().trim().min(1).max(40)).max(8) });
+export const qualityReviewSchema = z.object({ titleClarity: z.enum(["Good", "Needs review"]), description: z.enum(["Good", "Could be more specific", "Missing"]), pickupInformation: z.enum(["Complete", "Needs review", "Missing"]), packagingInformation: z.enum(["Complete", "Needs seller review", "Missing"]), allergenInformation: z.enum(["Complete", "Needs seller review", "Missing"]), suggestedImprovements: z.array(z.string().trim().min(1).max(240)).max(5) });
+export const searchIntentSchema = z.object({ query: z.string().trim().max(100), foodType: z.enum(["VEGETARIAN", "NON_VEGETARIAN", "VEGAN", "JAIN", "OTHER"]).nullable(), categoryHint: z.string().trim().max(80).nullable(), maxPrice: z.number().int().nonnegative().nullable(), keywords: z.array(z.string().trim().min(1).max(40)).max(5) });
+export const insightSchema = z.object({ suggestions: z.array(z.string().trim().min(1).max(300)).max(5) });
+export type ListingAssistant = z.infer<typeof listingAssistantSchema>;
+export type QualityReview = z.infer<typeof qualityReviewSchema>;

@@ -1,0 +1,4 @@
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+import { interpretSearch } from "@/lib/ai/buyer";
+export async function POST(request: Request) { const user = await getCurrentUser(); if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 }); if (user.role !== "BUYER" || user.status !== "ACTIVE") return NextResponse.json({ error: "Forbidden." }, { status: 403 }); try { const body = await request.json() as { query?: string }; const query = String(body.query ?? "").trim(); if (!query || query.length > 100) return NextResponse.json({ error: "Search query is invalid." }, { status: 400 }); return NextResponse.json(await interpretSearch(user.id, query)); } catch { return NextResponse.json({ error: "Search assistance is temporarily unavailable." }, { status: 503 }); } }
