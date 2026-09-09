@@ -1,4 +1,5 @@
 import { createHmac } from "node:crypto";
+import { safeEqualSecret } from "@/lib/security";
 
 export type PaymentOrder = { id: string; amount: number; currency: string };
 
@@ -29,11 +30,11 @@ export async function refundGatewayPayment(providerPaymentId: string, amount: nu
 export function verifyCheckoutSignature(orderId: string, paymentId: string, signature: string) {
   const secret = required("PAYMENT_KEY_SECRET");
   const expected = createHmac("sha256", secret).update(`${orderId}|${paymentId}`).digest("hex");
-  return expected.length === signature.length && expected === signature;
+  return safeEqualSecret(signature, expected);
 }
 
 export function verifyWebhookSignature(rawBody: string, signature: string) {
   const secret = required("PAYMENT_WEBHOOK_SECRET");
   const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
-  return expected.length === signature.length && expected === signature;
+  return safeEqualSecret(signature, expected);
 }

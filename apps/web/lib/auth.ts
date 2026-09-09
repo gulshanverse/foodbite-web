@@ -20,7 +20,7 @@ export const authOptions: AuthOptions = {
       const email = parsed.data.email.toLowerCase();
       const user = await prisma.user.findFirst({ where: { email, deletedAt: null }, include: { buyerProfile: true } });
       if (!user || !(await verifyPassword(parsed.data.password, user.passwordHash))) return null;
-      if (["BANNED", "DEACTIVATED"].includes(user.status)) return null;
+      if (user.status !== "ACTIVE") return null;
       return { id: user.id, email: user.email, name: user.buyerProfile?.name, role: user.role, status: user.status };
     },
   })],
@@ -45,6 +45,6 @@ export async function getCurrentUser(): Promise<AppUser | null> {
   const session = await getServerSession(authOptions) as (Session & { user?: AppUser }) | null;
   if (!session?.user?.id) return null;
   const user = await prisma.user.findFirst({ where: { id: session.user.id, deletedAt: null }, select: { id: true, email: true, role: true, status: true, buyerProfile: { select: { name: true } } } });
-  if (!user) return null;
+  if (!user || user.status !== "ACTIVE") return null;
   return { id: user.id, email: user.email, name: user.buyerProfile?.name, role: user.role, status: user.status };
 }

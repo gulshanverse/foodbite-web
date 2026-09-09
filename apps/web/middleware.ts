@@ -4,7 +4,19 @@ import type { NextRequest } from "next/server";
 const protectedPrefixes = ["/buyer", "/seller", "/admin", "/ngo", "/account"];
 const requestIdPattern = /^[A-Za-z0-9._:-]{8,128}$/;
 function withRequestId(request: NextRequest, requestId: string) { const headers = new Headers(request.headers); headers.set("x-request-id", requestId); return headers; }
-function secure(response: NextResponse, requestId: string) { response.headers.set("x-request-id", requestId); response.headers.set("x-content-type-options", "nosniff"); response.headers.set("referrer-policy", "strict-origin-when-cross-origin"); response.headers.set("permissions-policy", "camera=(), microphone=(), geolocation=()"); response.headers.set("x-frame-options", "DENY"); return response; }
+function secure(response: NextResponse, requestId: string) {
+  response.headers.set("x-request-id", requestId);
+  response.headers.set("x-content-type-options", "nosniff");
+  response.headers.set("referrer-policy", "strict-origin-when-cross-origin");
+  response.headers.set("permissions-policy", "camera=(), microphone=(), geolocation=()");
+  response.headers.set("x-frame-options", "DENY");
+  response.headers.set("cross-origin-opener-policy", "same-origin");
+  response.headers.set("cross-origin-resource-policy", "same-origin");
+  response.headers.set("content-security-policy", process.env.NODE_ENV === "development"
+    ? "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https:; form-action 'self'"
+    : "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline'; connect-src 'self' https:; form-action 'self'");
+  return response;
+}
 export async function middleware(request: NextRequest) {
   const supplied = request.headers.get("x-request-id"); const requestId = supplied && requestIdPattern.test(supplied) ? supplied : `req_${crypto.randomUUID()}`; const requestHeaders = withRequestId(request, requestId); const next = () => secure(NextResponse.next({ request: { headers: requestHeaders } }), requestId);
   const { pathname } = request.nextUrl;

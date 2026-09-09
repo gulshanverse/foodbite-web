@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { signupSchema } from "@foodbite/validation";
+import { checkRateLimit, clientKey, rateLimitResponse } from "@/lib/security";
 
 export async function POST(request: Request) {
+  const limit = checkRateLimit(`signup:${clientKey(request)}`, { limit: 5, windowMs: 15 * 60_000 });
+  if (!limit.allowed) return NextResponse.json({ error: "Too many signup attempts. Try again later." }, { status: 429, headers: rateLimitResponse(limit) });
   try {
     const input = signupSchema.parse(await request.json());
     const existing = await prisma.user.findFirst({ where: { email: input.email.toLowerCase(), deletedAt: null }, select: { id: true } });
