@@ -2,10 +2,11 @@ import { randomBytes, randomInt, createHash } from "node:crypto";
 import { Prisma, type FoodType, type ListingUnit } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { notifyOrderEvent } from "@/lib/notification-domain";
+import { log, safeErrorCategory } from "@/lib/logger";
 
 const RESERVATION_MINUTES = 10;
 function dispatchOrderNotification(orderId: string, type: Parameters<typeof notifyOrderEvent>[1]) {
-  void notifyOrderEvent(orderId, type).catch((error) => console.error(JSON.stringify({ operation: "notification_dispatch", orderId, type, outcome: "failed", errorCategory: error instanceof Error ? error.message : "unknown" })));
+  void notifyOrderEvent(orderId, type).catch((error) => log("error", "notification_dispatch_failed", { orderId, type, category: safeErrorCategory(error) }));
 }
 export function hashSecret(value: string) { return createHash("sha256").update(value).digest("hex"); }
 export function createPickupSecrets() { const code = randomInt(100000, 1000000).toString(); const token = randomBytes(32).toString("base64url"); return { code, token, codeHash: hashSecret(code), tokenHash: hashSecret(token) }; }
@@ -31,12 +32,14 @@ export async function removeCartItem(userId: string, listingId: string) { const 
 
 export async function expireReservations(tx: Prisma.TransactionClient, now: Date) {
   const expired = await tx.reservation.findMany({ where: { status: "ACTIVE", expiresAt: { lte: now } }, select: { id: true, listingId: true, quantity: true } });
+  let released = 0;
   for (const reservation of expired) {
     const changed = await tx.reservation.updateMany({ where: { id: reservation.id, status: "ACTIVE" }, data: { status: "EXPIRED" } });
-    if (changed.count === 1) await tx.inventory.updateMany({ where: { listingId: reservation.listingId, reservedQuantity: { gte: reservation.quantity } }, data: { availableQuantity: { increment: reservation.quantity }, reservedQuantity: { decrement: reservation.quantity }, version: { increment: 1 } } });
+    if (changed.count === 1) { released += 1; await tx.inventory.updateMany({ where: { listingId: reservation.listingId, reservedQuantity: { gte: reservation.quantity } }, data: { availableQuantity: { increment: reservation.quantity }, reservedQuantity: { decrement: reservation.quantity }, version: { increment: 1 } } }); }
   }
+  return released;
 }
-export async function releaseExpiredReservations() { return prisma.$transaction(async (tx) => { await expireReservations(tx, new Date()); }); }
+export async function releaseExpiredReservations() { return prisma.$transaction(async (tx) => expireReservations(tx, new Date())); }
 
 export async function reserveListing(userId: string, listingId: string, quantity: number) {
   if (!Number.isInteger(quantity) || quantity < 1) throw new Error("Quantity must be positive.");

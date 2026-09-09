@@ -5,6 +5,7 @@ import { hashSecret } from "@/lib/order-domain";
 import { prisma } from "@/lib/prisma";
 import { recordAuditEvent } from "@/lib/audit";
 import { notifyOrderEvent } from "@/lib/notification-domain";
+import { log, safeErrorCategory } from "@/lib/logger";
 
 const schema = z.object({ orderId: z.string().uuid(), code: z.string().regex(/^\d{6}$/) });
 
@@ -23,6 +24,6 @@ export async function POST(request: Request) {
     return tx.order.update({ where: { id: parsed.data.orderId }, data: { status: "PICKED_UP" } });
   });
   await recordAuditEvent({ actorId: user.id, action: "PICKUP_VERIFIED", resourceType: "Order", resourceId: parsed.data.orderId, metadata: { outcome: "success" } });
-  void notifyOrderEvent(parsed.data.orderId, "ORDER_PICKED_UP").catch((error) => console.error(JSON.stringify({ operation: "notification_dispatch", orderId: parsed.data.orderId, type: "ORDER_PICKED_UP", outcome: "failed", errorCategory: error instanceof Error ? error.message : "unknown" })));
+  void notifyOrderEvent(parsed.data.orderId, "ORDER_PICKED_UP").catch((error) => log("error", "notification_dispatch_failed", { orderId: parsed.data.orderId, type: "ORDER_PICKED_UP", category: safeErrorCategory(error) }));
   return NextResponse.json({ order: updated });
 }

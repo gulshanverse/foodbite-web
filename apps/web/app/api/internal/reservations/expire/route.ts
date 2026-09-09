@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
 import { releaseExpiredReservations } from "@/lib/order-domain";
-
-async function run(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  await releaseExpiredReservations();
-  return NextResponse.json({ ok: true });
-}
+import { createRequestId, log, safeErrorCategory } from "@/lib/logger";
+async function run(request: Request) { const requestId = createRequestId(request.headers.get("x-request-id")); const started = Date.now(); const secret = process.env.CRON_SECRET; if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) { log("warn", "reservation_worker_unauthorized", { requestId }); return NextResponse.json({ error: "Unauthorized.", requestId }, { status: 401, headers: { "x-request-id": requestId } }); } try { const released = await releaseExpiredReservations(); log("info", "reservation_worker_completed", { requestId, released, durationMs: Date.now() - started }); return NextResponse.json({ ok: true, released, requestId }, { headers: { "x-request-id": requestId } }); } catch (error) { log("error", "reservation_worker_failed", { requestId, durationMs: Date.now() - started, category: safeErrorCategory(error) }); return NextResponse.json({ error: "Reservation expiration failed.", requestId }, { status: 503, headers: { "x-request-id": requestId } }); } }
 export async function GET(request: Request) { return run(request); }
 export async function POST(request: Request) { return run(request); }

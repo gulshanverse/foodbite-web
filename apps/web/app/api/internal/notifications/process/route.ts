@@ -1,10 +1,4 @@
 import { NextResponse } from "next/server";
 import { processPendingNotifications } from "@/lib/notification-domain";
-
-export async function POST(request: Request) {
-  const expected = process.env.CRON_SECRET;
-  const provided = request.headers.get("x-cron-secret");
-  if (!expected || !provided || provided !== expected) return NextResponse.json({ error: "Forbidden." }, { status: 403 });
-  const result = await processPendingNotifications(25);
-  return NextResponse.json({ processed: result.length, result });
-}
+import { createRequestId, log, safeErrorCategory } from "@/lib/logger";
+export async function POST(request: Request) { const requestId = createRequestId(request.headers.get("x-request-id")); const started = Date.now(); const expected = process.env.CRON_SECRET; const provided = request.headers.get("x-cron-secret"); if (!expected || !provided || provided !== expected) { log("warn", "notification_worker_unauthorized", { requestId }); return NextResponse.json({ error: "Forbidden.", requestId }, { status: 403, headers: { "x-request-id": requestId } }); } try { const result = await processPendingNotifications(25); const sent = result.filter((item) => "sent" in item && item.sent).length; const failed = result.filter((item) => "failed" in item && item.failed).length; log("info", "notification_worker_completed", { requestId, processed: result.length, sent, failed, durationMs: Date.now() - started }); return NextResponse.json({ processed: result.length, sent, failed, requestId }, { headers: { "x-request-id": requestId } }); } catch (error) { log("error", "notification_worker_failed", { requestId, durationMs: Date.now() - started, category: safeErrorCategory(error) }); return NextResponse.json({ error: "Notification processing failed.", requestId }, { status: 503, headers: { "x-request-id": requestId } }); } }

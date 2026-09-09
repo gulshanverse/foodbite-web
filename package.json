@@ -15,6 +15,7 @@
     "format:check": "prettier --check .",
     "db:generate": "prisma generate",
     "db:validate": "DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/foodbite} prisma validate",
+    "config:check": "tsx scripts/config-check.ts",
     "prisma": "prisma",
     "db:migrate:deploy": "prisma migrate deploy"
   },

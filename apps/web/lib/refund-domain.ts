@@ -2,8 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { refundGatewayPayment } from "@/lib/payment";
 import { recordAuditEvent } from "@/lib/audit";
 import { notifyOrderEvent } from "@/lib/notification-domain";
+import { log, safeErrorCategory } from "@/lib/logger";
 
-function dispatch(orderId: string, type: "REFUND_PENDING" | "REFUND_COMPLETED") { void notifyOrderEvent(orderId, type).catch((error) => console.error(JSON.stringify({ operation: "notification_dispatch", orderId, type, outcome: "failed", errorCategory: error instanceof Error ? error.message : "unknown" }))); }
+function dispatch(orderId: string, type: "REFUND_PENDING" | "REFUND_COMPLETED") { void notifyOrderEvent(orderId, type).catch((error) => log("error", "notification_dispatch_failed", { orderId, type, category: safeErrorCategory(error) })); }
 
 export async function refundOrder(actorId: string, orderId: string) {
   const order = await prisma.order.findUnique({ where: { id: orderId }, include: { payment: true } });

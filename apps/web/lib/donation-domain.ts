@@ -3,6 +3,7 @@ import { donationReservationSchema, donationSchema, ngoProfileSchema } from "@fo
 import { createPickupSecrets, hashSecret } from "@/lib/order-domain";
 import { recordAuditEvent } from "@/lib/audit";
 import { createNotificationEvents } from "@/lib/notification-domain";
+import { log, safeErrorCategory } from "@/lib/logger";
 import type { DonationStatus, SellerVerificationStatus } from "@prisma/client";
 
 const verificationTransitions: Record<SellerVerificationStatus, SellerVerificationStatus[]> = { PENDING: ["UNDER_REVIEW", "REJECTED"], UNDER_REVIEW: ["VERIFIED", "REJECTED", "SUSPENDED"], VERIFIED: ["SUSPENDED"], REJECTED: ["UNDER_REVIEW"], SUSPENDED: ["UNDER_REVIEW"] };
@@ -13,7 +14,7 @@ export function canTransitionDonation(from: DonationStatus, to: DonationStatus) 
 
 async function notifyDonation(donationId: string, type: "DONATION_AVAILABLE" | "DONATION_RESERVED" | "DONATION_ACCEPTED" | "DONATION_READY" | "DONATION_COLLECTED" | "DONATION_COMPLETED" | "DONATION_CANCELLED" | "DONATION_EXPIRED", recipientIds: string[]) {
   const events = recipientIds.map((recipientId) => ({ eventId: `${donationId}:${type}:${recipientId}`, recipientId, type, payload: { orderNumber: `DON-${donationId.slice(0, 8).toUpperCase()}`, totalAmount: 0 } }));
-  try { await createNotificationEvents(events); } catch (error) { console.error(JSON.stringify({ operation: "donation_notification", donationId, type, outcome: "failed", errorCategory: error instanceof Error ? error.message : "unknown" })); }
+  try { await createNotificationEvents(events); } catch (error) { log("error", "donation_notification_failed", { donationId, type, category: safeErrorCategory(error) }); }
 }
 
 export async function getOwnNgoProfile(userId: string) { return prisma.nGOProfile.findUnique({ where: { userId } }); }

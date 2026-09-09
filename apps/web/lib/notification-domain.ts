@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { NotificationChannel, NotificationType } from "@prisma/client";
+import { log, safeErrorCategory } from "@/lib/logger";
 
 const MAX_ATTEMPTS = 3;
 const RETRY_MINUTES = [5, 30, 120];
@@ -80,12 +81,12 @@ export async function processPendingNotification(id: string) {
   try {
     await emailProvider.send({ to: notification.recipient.email, subject: notification.title, text: notification.body });
     await prisma.notification.update({ where: { id }, data: { status: "SENT", sentAt: new Date(), lastError: null } });
-    console.info(JSON.stringify({ operation: "notification_delivery", notificationId: id, eventType: notification.type, channel: notification.channel, provider: "resend", result: "sent" }));
+    log("info", "notification_delivery", { notificationId: id, eventType: notification.type, channel: notification.channel, provider: "resend", result: "sent" });
     return { sent: true };
   } catch (error) {
     const attempts = notification.deliveryAttempts;
     await prisma.notification.update({ where: { id }, data: { status: "FAILED", lastError: error instanceof Error ? error.message.slice(0, 200) : "provider_failure", nextAttemptAt: attempts < MAX_ATTEMPTS ? new Date(Date.now() + RETRY_MINUTES[Math.min(attempts - 1, RETRY_MINUTES.length - 1)] * 60_000) : null } });
-    console.warn(JSON.stringify({ operation: "notification_delivery", notificationId: id, eventType: notification.type, channel: notification.channel, provider: "resend", result: "failed", failureCategory: error instanceof Error ? error.message : "provider_failure", attempt: attempts }));
+    log("warn", "notification_delivery", { notificationId: id, eventType: notification.type, channel: notification.channel, provider: "resend", result: "failed", failureCategory: safeErrorCategory(error), attempt: attempts });
     return { sent: false, failed: true };
   }
 }

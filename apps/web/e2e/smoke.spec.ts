@@ -5,6 +5,13 @@ test("landing page loads", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /Good Food/i })).toBeVisible();
 });
 
+test("liveness endpoint returns a minimal healthy response", async ({ request }) => {
+  const response = await request.get("/api/health");
+  expect(response.ok()).toBe(true);
+  expect(await response.json()).toEqual({ ok: true });
+  expect(response.headers()["x-request-id"]).toMatch(/^req_/);
+});
+
 test("public marketplace explore loads without login", async ({ page }) => {
   await page.goto("/explore");
   await expect(page.getByRole("heading", { name: /Good food, ready for pickup/i })).toBeVisible();
