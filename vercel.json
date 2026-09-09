@@ -1,5 +1,0 @@
-{
-  "crons": [
-    { "path": "/api/internal/reservations/expire", "schedule": "*/5 * * * *" }
-  ]
-}

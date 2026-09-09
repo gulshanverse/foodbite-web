@@ -22,7 +22,22 @@ The repository does not configure an external error-tracking vendor. The structu
 
 `POST /api/internal/notifications/process` requires the server-only `x-cron-secret` value and processes at most 25 notifications per invocation. Notification records are claimed transactionally, retry at bounded intervals, and stop after three attempts. The response and structured event report processed, sent, and failed counts without returning notification bodies or recipient data.
 
-`GET|POST /api/internal/reservations/expire` requires `Authorization: Bearer <CRON_SECRET>`. Reservation expiration uses an active-state conditional update, returns the number released, and is safe under repeated or concurrent invocation. The Vercel schedule currently invokes this endpoint every five minutes. Notification processing is available as an authenticated worker endpoint but is not claimed to be scheduled by this repository.
+`GET|POST /api/internal/reservations/expire` requires `Authorization: Bearer <CRON_SECRET>`. Reservation expiration uses an active-state conditional update, returns the number released, and is safe under repeated or concurrent invocation. The GitHub Actions workflow `.github/workflows/foodbite-workers.yml` invokes this endpoint every five minutes using the repository/environment secret `CRON_SECRET`.
+
+`POST /api/internal/notifications/process` is invoked by the same workflow with `x-cron-secret: <CRON_SECRET>`. The two authentication headers intentionally remain different because the worker API contracts predate the scheduler migration.
+
+## GitHub Actions worker scheduler
+
+Vercel Cron is not configured. The GitHub Actions workflow is a trigger only; database timestamps and the existing idempotent worker transitions remain authoritative. The intended schedule is every five minutes, but GitHub Actions may delay scheduled runs. Workflow concurrency uses the `foodbite-workers` group with `cancel-in-progress: false`, so an in-flight run is allowed to finish rather than being cancelled. The worker requests have bounded connect and total timeouts and the workflow fails for any non-2xx response, including authentication, rate-limit, server, or network failures.
+
+Configure the following GitHub repository or environment settings without committing their values:
+
+| Setting | Type | Purpose |
+| --- | --- | --- |
+| `CRON_SECRET` | Actions secret | Must be the same value configured in the FoodBite/Vercel deployment. It is sent only in the existing worker authentication headers. |
+| `FOODBITE_APP_URL` | Actions variable | Base HTTPS URL of the staging or production deployment, without a required trailing slash. |
+
+Use **workflow dispatch** for a manual invocation after verifying that the target URL and secret belong to the intended environment. Do not put secrets in URLs, workflow output, source code, or documentation. The workflow intentionally discards worker response bodies and logs only endpoint paths and HTTP status codes. GitHub Actions scheduling is not hard real-time: a delayed or missed run must be safe because expiration and notification retry decisions remain database-authoritative.
 
 The payment webhook is `POST /api/payments/webhook`. It verifies the HMAC signature before parsing, validates the bounded payload, records a unique provider event, and ignores already processed events. Payment transitions continue to use the existing transactional domain functions. Failures return a safe request identifier and leave the webhook record retryable; secrets, signatures, and raw payloads are never logged.
 

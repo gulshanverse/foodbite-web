@@ -1,0 +1,54 @@
+name: FoodBite Workers
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: foodbite-workers
+  cancel-in-progress: false
+
+jobs:
+  invoke-workers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      FOODBITE_APP_URL: ${{ vars.FOODBITE_APP_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+    steps:
+      - name: Invoke protected workers
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${FOODBITE_APP_URL}" || -z "${CRON_SECRET}" ]]; then
+            echo "FOODBITE_APP_URL and CRON_SECRET must be configured in GitHub Actions."
+            exit 1
+          fi
+
+          base_url="${FOODBITE_APP_URL%/}"
+
+          invoke() {
+            local path="$1"
+            local auth_header="$2"
+            local status
+
+            status="$(curl --silent --show-error --output /dev/null \
+              --write-out '%{http_code}' \
+              --connect-timeout 10 \
+              --max-time 45 \
+              --request POST \
+              --header "${auth_header}" \
+              "${base_url}${path}")"
+
+            if [[ ! "${status}" =~ ^2[0-9][0-9]$ ]]; then
+              echo "Worker request failed: ${path} returned HTTP ${status}."
+              return 1
+            fi
+
+            echo "Worker request succeeded: ${path} returned HTTP ${status}."
+          }
+
+          invoke "/api/internal/reservations/expire" "Authorization: Bearer ${CRON_SECRET}"
+          invoke "/api/internal/notifications/process" "x-cron-secret: ${CRON_SECRET}"
