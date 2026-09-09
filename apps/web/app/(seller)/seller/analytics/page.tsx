@@ -1,5 +1,4 @@
-import { PlaceholderPage } from "@/components/shared/placeholder-page";
-
-export default function Page() {
-  return <PlaceholderPage title="Analytics" description="This route is reserved for the seller analytics foundation. The workflow will be introduced in a later phase." />;
-}
+import { requireRole } from "@/lib/authorization";
+import { getSellerAnalytics } from "@/lib/analytics-domain";
+import { AnalyticsView } from "@/components/analytics/analytics-view";
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) { const user = await requireRole("SELLER"); const params = await searchParams; try { const data = await getSellerAnalytics(user.id, Object.fromEntries(Object.entries(params).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]))); return <AnalyticsView title="Seller analytics" subtitle="Real sales, inventory, recovery, listing, and fulfillment metrics for your own business. Values are based on live persisted records." data={data} />; } catch { return <main className="mx-auto max-w-3xl px-6 py-16"><h1 className="text-3xl font-bold text-[#173f3b]">Seller analytics unavailable</h1><p className="mt-3 text-[#55706c]">Analytics could not be loaded for this period. Transactional FoodBite workflows remain available.</p></main>; } }

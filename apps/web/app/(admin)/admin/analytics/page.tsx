@@ -1,5 +1,4 @@
-import { PlaceholderPage } from "@/components/shared/placeholder-page";
-
-export default function Page() {
-  return <PlaceholderPage title="Analytics" description="This route is reserved for the admin analytics foundation. The workflow will be introduced in a later phase." />;
-}
+import { requirePermission } from "@/lib/authorization";
+import { getAdminAnalytics } from "@/lib/analytics-domain";
+import { AnalyticsView } from "@/components/analytics/analytics-view";
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) { const gate = await requirePermission("ANALYTICS_READ"); if (gate.response) return <main className="mx-auto max-w-3xl px-6 py-16"><h1 className="text-3xl font-bold text-[#173f3b]">Analytics access unavailable</h1><p className="mt-3 text-[#55706c]">An authorized administrator is required to view platform analytics.</p></main>; const params = await searchParams; try { const data = await getAdminAnalytics(Object.fromEntries(Object.entries(params).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]))); return <AnalyticsView title="Platform analytics" subtitle="Privacy-safe marketplace, order, payment, recovery, fulfillment, listing, and account aggregates." data={data} admin />; } catch { return <main className="mx-auto max-w-3xl px-6 py-16"><h1 className="text-3xl font-bold text-[#173f3b]">Platform analytics unavailable</h1><p className="mt-3 text-[#55706c]">Analytics could not be loaded for this period. No fallback values are fabricated.</p></main>; } }

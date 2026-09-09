@@ -37,3 +37,15 @@ export const orderTransitionSchema = z.object({ status: z.enum(["CONFIRMED", "PR
 export const cancellationSchema = z.object({ reason: z.string().trim().max(500).optional() });
 export const pickupVerificationSchema = z.object({ pickupCode: z.string().regex(/^\d{6}$/) });
 export const paymentWebhookSchema = z.object({ provider: z.string().trim().min(2).max(40), eventId: z.string().trim().min(3).max(200), eventType: z.string().trim().min(3).max(120), orderId: z.string().uuid(), providerPaymentId: z.string().trim().max(200).optional(), status: z.enum(["SUCCESS", "FAILED", "REFUNDED"]) });
+export const analyticsRangeSchema = z.object({
+  range: z.enum(["today", "7d", "30d", "month", "previous-month", "custom"]).default("30d"),
+  start: z.string().datetime().optional(),
+  end: z.string().datetime().optional(),
+}).superRefine((value, ctx) => {
+  if (value.range === "custom" && (!value.start || !value.end)) ctx.addIssue({ code: "custom", path: ["start"], message: "Custom analytics ranges require start and end dates." });
+  if (value.start && value.end) {
+    const start = new Date(value.start); const end = new Date(value.end);
+    if (start >= end) ctx.addIssue({ code: "custom", path: ["end"], message: "Analytics end must be after start." });
+    if (end.getTime() - start.getTime() > 90 * 24 * 60 * 60 * 1000) ctx.addIssue({ code: "custom", path: ["end"], message: "Analytics ranges cannot exceed 90 days." });
+  }
+});
