@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/authorization";
 import { listAvailableDonations, listNgoDonations, getOwnNgoProfile } from "@/lib/donation-domain";
 
 type AvailableDonation = Awaited<ReturnType<typeof listAvailableDonations>>[number];
+type NgoDonationReservation = Awaited<ReturnType<typeof listNgoDonations>>[number];
 
 export default async function NgoDonationsPage() {
   const user = await requireRole("NGO");
@@ -36,7 +37,7 @@ export default async function NgoDonationsPage() {
       <section className="mt-10">
         <h2 className="text-2xl font-bold text-[#173f3b]">My accepted donations</h2>
         <div className="mt-4 space-y-3">
-          {mine.map((reservation) => (
+          {mine.map((reservation: NgoDonationReservation) => (
             <div key={reservation.id} className="rounded-2xl border border-[#dbe4df] p-4">
               <strong>{reservation.donation.listing.name}</strong>
               <span className="ml-3 text-sm text-[#55706c]">{reservation.quantity} portions · {reservation.donation.status.replaceAll("_", " ")}</span>
