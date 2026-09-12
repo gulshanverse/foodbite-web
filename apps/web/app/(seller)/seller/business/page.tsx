@@ -9,6 +9,7 @@ export default async function SellerBusinessPage() {
     include: { business: { include: { operatingHours: true } } },
   });
   const business = seller?.business;
+  type BusinessOperatingHour = NonNullable<typeof business>["operatingHours"][number];
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-12">
@@ -44,7 +45,7 @@ export default async function SellerBusinessPage() {
       </div>
       {business && (
         <OperatingHoursForm
-          initial={business.operatingHours.map((hour) => ({
+          initial={business.operatingHours.map((hour: BusinessOperatingHour) => ({
             dayOfWeek: hour.dayOfWeek,
             openTime: hour.openTime,
             closeTime: hour.closeTime,
