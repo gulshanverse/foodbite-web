@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowRight, ChevronLeft, ChevronRight, Clock3, HeartHandshake, MapPin, Sparkles, Store } from "lucide-react";
 
 const slides = [
-  { eyebrow: "Discover nearby", title: "Good food, right when it matters.", copy: "Find eligible surplus food from nearby businesses with clear pickup windows and straightforward pricing.", icon: MapPin, tone: "coral" },
+  { eyebrow: "Discover nearby", title: "A better nearby choice.", copy: "Find eligible surplus food from nearby businesses with clear pickup windows and straightforward pricing.", icon: MapPin, tone: "coral" },
   { eyebrow: "For businesses", title: "Turn surplus into value.", copy: "Publish what is available, manage inventory, and keep every transaction tied to a real pickup or delivery workflow.", icon: Store, tone: "green" },
   { eyebrow: "For communities", title: "Share more. Waste less.", copy: "When eligible surplus cannot be sold, verified recovery partners can help move it toward a useful next chapter.", icon: HeartHandshake, tone: "sand" },
 ] as const;
@@ -21,7 +21,6 @@ export default function Home() {
   React.useEffect(() => { const timer = window.setInterval(() => setActive((value) => (value + 1) % slides.length), 6000); return () => window.clearInterval(timer); }, []);
   const slide = slides[active];
   const Icon = slide.icon;
-
   return (
     <main className="home-page">
       <section className="home-hero">
@@ -46,7 +45,7 @@ export default function Home() {
         </div>
       </section>
       <section className="home-section home-section-bordered">
-        <div className="home-section-heading"><div><p className="page-kicker">The FoodBite difference</p><h2>A calmer way to move good food.</h2></div><p>Premium on the surface. Practical underneath. Every important action stays close to the information you need.</p></div>
+        <div className="home-section-heading"><div><p className="page-kicker">The FoodBite difference</p><h2>A calmer marketplace.</h2></div><p>Premium on the surface. Practical underneath. Every important action stays close to the information you need.</p></div>
         <div className="home-pillars">{pillars.map(({ icon: PillarIcon, title, text }) => <article key={title} className="home-pillar"><span><PillarIcon className="size-5" /></span><h3>{title}</h3><p>{text}</p></article>)}</div>
       </section>
       <section className="home-section home-cta"><div><p className="page-kicker">Start where you are</p><h2>Find your next good meal — or give your surplus a better path.</h2></div><div className="home-cta-actions"><Link href="/explore" className="home-primary">Explore food <ArrowRight className="size-4" /></Link><Link href="/signup" className="home-secondary">Create an account</Link></div></section>
