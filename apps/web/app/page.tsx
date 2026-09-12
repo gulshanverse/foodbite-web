@@ -1,6 +1,48 @@
-import React from "react";
 import Link from "next/link";
-import { ArrowRight, MapPin, ShieldCheck, Store } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowRight, Clock3, MapPin, ShieldCheck, Store, UtensilsCrossed } from "lucide-react";
 
-export default function Home() { return <main className="min-h-screen overflow-hidden"><header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6 lg:px-10"><Link href="/" className="flex items-center gap-3 text-lg font-bold tracking-tight"><span className="grid size-10 place-items-center rounded-xl bg-[#173f3b] text-white">F</span> FoodBite</Link><nav className="hidden items-center gap-8 text-sm font-semibold text-[#55706c] md:flex"><Link href="/explore" className="hover:text-[#173f3b]">Explore</Link><Link href="/seller" className="hover:text-[#173f3b]">For businesses</Link><Link href="/login" className="hover:text-[#173f3b]">Sign in</Link></nav><Link href="/signup" className="text-sm font-semibold text-[#173f3b] md:hidden">Join</Link></header><section className="mx-auto grid max-w-7xl gap-12 px-6 pb-24 pt-12 lg:grid-cols-[1.05fr_.95fr] lg:items-center lg:px-10 lg:pt-20"><div><p className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#dbe4df] bg-white/70 px-4 py-2 text-sm font-semibold text-[#55706c]"><span className="size-2 rounded-full bg-[#e85d3f]" />Built for better food days</p><h1 className="max-w-3xl text-5xl font-bold leading-[1.02] tracking-[-.05em] text-[#173f3b] sm:text-7xl">Good Food.<br /><span className="text-[#e85d3f]">Less Waste.</span></h1><p className="mt-8 max-w-xl text-lg leading-8 text-[#55706c]">Food businesses can turn eligible surplus food into value instead of letting it go to waste.</p><div className="mt-10 flex flex-col gap-3 sm:flex-row"><Link href="/explore"><Button>Find Food Near Me <ArrowRight className="ml-2 size-4" /></Button></Link><Link href="/seller"><Button className="border border-[#173f3b] bg-transparent text-[#173f3b] hover:bg-[#e8eeeb]">List Surplus Food</Button></Link></div><div className="mt-12 flex flex-wrap gap-6 text-sm text-[#55706c]"><span className="flex items-center gap-2"><MapPin className="size-4 text-[#e85d3f]" />Pickup-first</span><span className="flex items-center gap-2"><ShieldCheck className="size-4 text-[#e85d3f]" />Trust by design</span><span className="flex items-center gap-2"><Store className="size-4 text-[#e85d3f]" />Made for food businesses</span></div></div><div className="relative"><div className="absolute -inset-6 rounded-[2rem] bg-[#f2c8a7]/45 blur-3xl" /><div className="relative rounded-[2rem] border border-[#dbe4df] bg-[#173f3b] p-4 shadow-2xl shadow-[#173f3b]/15"><div className="aspect-[4/5] overflow-hidden rounded-[1.5rem] bg-[#f1dfc7] p-6"><div className="flex h-full flex-col justify-between rounded-2xl border border-[#173f3b]/10 bg-[#f7f5ef]/80 p-6"><div className="flex justify-between text-sm font-semibold text-[#55706c]"><span>Surplus, thoughtfully shared</span><span>01</span></div><div><div className="mb-5 h-28 rounded-2xl bg-[#e85d3f]/85" /><h2 className="text-3xl font-bold tracking-tight text-[#173f3b]">A better end<br />to a good meal.</h2><p className="mt-4 text-sm leading-6 text-[#55706c]">Discover eligible surplus food from businesses near you, available for pickup.</p></div><div className="flex items-center justify-between border-t border-[#173f3b]/10 pt-4 text-sm font-semibold text-[#173f3b]"><span>India-first marketplace</span><span>FoodBite ↗</span></div></div></div></div></div></section><section className="border-t border-[#dbe4df] bg-white/50"><div className="mx-auto grid max-w-7xl gap-8 px-6 py-12 sm:grid-cols-3 lg:px-10"><div><p className="text-sm font-semibold text-[#e85d3f]">01</p><h2 className="mt-3 text-xl font-bold">Value, not waste</h2><p className="mt-2 text-sm leading-6 text-[#55706c]">A clear path for eligible surplus food to reach people who want it.</p></div><div><p className="text-sm font-semibold text-[#e85d3f]">02</p><h2 className="mt-3 text-xl font-bold">Local by nature</h2><p className="mt-2 text-sm leading-6 text-[#55706c]">Designed around nearby discovery and convenient pickup.</p></div><div><p className="text-sm font-semibold text-[#e85d3f]">03</p><h2 className="mt-3 text-xl font-bold">Safety with accountability</h2><p className="mt-2 text-sm leading-6 text-[#55706c]">Trust will come from clear processes, not unsupported promises.</p></div></div></section></main>; }
+const pillars = [
+  { icon: UtensilsCrossed, title: "Good food, better timing", text: "Discover eligible surplus food while the seller's pickup window is still open." },
+  { icon: MapPin, title: "Local first", text: "FoodBite is designed around nearby discovery and pickup before delivery." },
+  { icon: ShieldCheck, title: "Trust by design", text: "Clear seller-provided information and controlled transaction states keep the experience accountable." },
+];
+
+export default function Home() {
+  return (
+    <main className="product-page !w-full !max-w-none !px-0 !py-0">
+      <section className="mx-auto grid min-h-[calc(100vh-72px)] w-full max-w-[1280px] items-center gap-12 px-6 py-14 lg:grid-cols-[1.02fr_.98fr] lg:px-10 lg:py-20">
+        <div>
+          <span className="status-chip" data-tone="accent"><span className="size-1.5 rounded-full bg-[var(--accent)]" /> India-first surplus food marketplace</span>
+          <h1 className="mt-7 max-w-3xl text-5xl font-black sm:text-7xl">Good Food.<br /><span className="text-[var(--accent)]">Less Waste.</span></h1>
+          <p className="mt-7 max-w-xl text-lg leading-8">FoodBite helps food businesses turn eligible surplus food into value — while buyers discover great food nearby at a better price.</p>
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+            <Link href="/explore" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[var(--accent)] px-6 font-extrabold text-white shadow-lg shadow-[color-mix(in_srgb,var(--accent)_22%,transparent)] transition hover:-translate-y-0.5 hover:bg-[var(--accent-strong)]">Find food near me <ArrowRight className="ml-2 size-4" /></Link>
+            <Link href="/seller" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-[var(--foreground)] bg-[var(--surface)] px-6 font-extrabold text-[var(--foreground)] transition hover:-translate-y-0.5 hover:bg-[var(--surface-muted)]">For food businesses</Link>
+          </div>
+          <div className="mt-9 flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold">
+            <span className="inline-flex items-center gap-2"><Clock3 className="size-4 text-[var(--accent)]" />Live pickup windows</span>
+            <span className="inline-flex items-center gap-2"><Store className="size-4 text-[var(--accent)]" />Seller-led listings</span>
+          </div>
+        </div>
+
+        <div className="hero-panel p-3 sm:p-4">
+          <div className="relative z-10 overflow-hidden rounded-[22px] bg-[var(--foreground)] p-5 text-[var(--background)] sm:p-7">
+            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-[.16em] opacity-65"><span>FoodBite</span><span>01 / 03</span></div>
+            <div className="mt-10 rounded-[22px] bg-[var(--surface)] p-5 text-[var(--foreground)] sm:p-7">
+              <div className="flex items-center justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[.14em] text-[var(--accent)]">Available now</p><h2 className="mt-2 text-3xl font-black tracking-tight">Surplus, thoughtfully shared.</h2></div><span className="grid size-12 place-items-center rounded-2xl bg-[var(--accent-soft)] text-[var(--accent)]"><UtensilsCrossed className="size-5" /></span></div>
+              <div className="mt-7 grid gap-3 sm:grid-cols-2"><div className="rounded-2xl bg-[var(--surface-muted)] p-4"><p className="text-xs font-bold uppercase tracking-wide opacity-60">Buyer</p><p className="mt-2 font-bold">Save on good food</p></div><div className="rounded-2xl bg-[var(--surface-muted)] p-4"><p className="text-xs font-bold uppercase tracking-wide opacity-60">Seller</p><p className="mt-2 font-bold">Recover value</p></div></div>
+              <div className="mt-3 rounded-2xl border border-[var(--border)] p-4"><p className="text-xs font-bold uppercase tracking-wide opacity-60">Designed around</p><p className="mt-2 font-bold">Nearby discovery · clear pickup windows · accountable transactions</p></div>
+            </div>
+            <p className="mt-5 text-sm opacity-65">Good food deserves a better next chapter.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-[var(--border)] bg-[var(--surface)]">
+        <div className="mx-auto grid max-w-[1280px] gap-4 px-6 py-10 sm:grid-cols-3 lg:px-10 lg:py-14">
+          {pillars.map(({ icon: Icon, title, text }) => <article key={title} className="surface-card p-6"><span className="grid size-10 place-items-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]"><Icon className="size-5" /></span><h2 className="mt-5 text-xl font-black">{title}</h2><p className="mt-2 text-sm leading-6">{text}</p></article>)}
+        </div>
+      </section>
+    </main>
+  );
+}

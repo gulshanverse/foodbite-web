@@ -1,57 +1,9 @@
+import { Building2, Clock3, MapPin, ShieldCheck, Truck } from "lucide-react";
 import { requireRole } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { BusinessForm, OperatingHoursForm } from "@/components/seller/seller-forms";
 
 export default async function SellerBusinessPage() {
-  const user = await requireRole("SELLER");
-  const seller = await prisma.sellerProfile.findUnique({
-    where: { userId: user.id },
-    include: { business: { include: { operatingHours: true } } },
-  });
-  const business = seller?.business;
-  type BusinessOperatingHour = NonNullable<typeof business>["operatingHours"][number];
-
-  return (
-    <main className="mx-auto max-w-4xl px-6 py-12">
-      <p className="text-sm font-semibold uppercase tracking-[.18em] text-[#e85d3f]">Seller business</p>
-      <h1 className="mt-3 text-4xl font-bold text-[#173f3b]">Business information</h1>
-      <p className="mt-3 max-w-2xl text-[#55706c]">
-        Keep your business details current. Seller-provided FSSAI information is collected for future verification workflows and does not mean your business is verified.
-      </p>
-      <div className="mt-10 rounded-2xl border border-[#dbe4df] bg-white p-6">
-        <BusinessForm
-          initial={
-            business
-              ? {
-                  name: business.name,
-                  type: business.type ?? "RESTAURANT",
-                  description: business.description,
-                  phone: business.phone,
-                  email: business.email,
-                  address: business.address,
-                  city: business.city,
-                  state: business.state,
-                  pincode: business.pincode,
-                  fssaiNumber: business.fssaiNumber,
-                  pickupAvailable: business.pickupAvailable,
-                  deliveryAvailable: business.deliveryAvailable,
-                  deliveryRadiusKm: business.deliveryRadiusKm?.toNumber() ?? null,
-                  deliveryBaseFee: business.deliveryBaseFee,
-                  deliveryPerKmFee: business.deliveryPerKmFee,
-                }
-              : undefined
-          }
-        />
-      </div>
-      {business && (
-        <OperatingHoursForm
-          initial={business.operatingHours.map((hour: BusinessOperatingHour) => ({
-            dayOfWeek: hour.dayOfWeek,
-            openTime: hour.openTime,
-            closeTime: hour.closeTime,
-          }))}
-        />
-      )}
-    </main>
-  );
+  const user = await requireRole("SELLER"); const seller = await prisma.sellerProfile.findUnique({ where: { userId: user.id }, include: { business: { include: { operatingHours: true } } } }); const business = seller?.business; type BusinessOperatingHour = NonNullable<typeof business>["operatingHours"][number];
+  return <main className="product-page"><div className="flex items-end gap-4"><span className="grid size-12 place-items-center rounded-2xl bg-[var(--accent-soft)] text-[var(--accent)]"><Building2 className="size-6" /></span><div><p className="page-kicker">Seller profile</p><h1 className="mt-2 text-4xl font-black sm:text-5xl">Business information</h1></div></div><p className="mt-4 max-w-3xl">Keep your public business details, fulfillment options, and operating hours current. Seller-provided FSSAI information is collected for verification workflows and does not itself mean your business is verified.</p><div className="mt-7 grid gap-5 lg:grid-cols-[1fr_320px]"><section className="form-section"><div className="mb-6 flex items-center gap-3"><MapPin className="size-5 text-[var(--accent)]" /><div><h2 className="text-xl font-black">Business details</h2><p className="text-sm">What buyers should know before pickup.</p></div></div><BusinessForm initial={business ? { name: business.name, type: business.type ?? "RESTAURANT", description: business.description, phone: business.phone, email: business.email, address: business.address, city: business.city, state: business.state, pincode: business.pincode, fssaiNumber: business.fssaiNumber, pickupAvailable: business.pickupAvailable, deliveryAvailable: business.deliveryAvailable, deliveryRadiusKm: business.deliveryRadiusKm?.toNumber() ?? null, deliveryBaseFee: business.deliveryBaseFee, deliveryPerKmFee: business.deliveryPerKmFee } : undefined} /></section><aside className="space-y-4"><div className="surface-card p-5"><ShieldCheck className="size-5 text-[var(--accent)]" /><h2 className="mt-3 font-black">Verification</h2><p className="mt-2 text-sm">Business verification status is controlled by FoodBite operations.</p></div><div className="surface-card p-5"><Truck className="size-5 text-[var(--accent)]" /><h2 className="mt-3 font-black">Fulfillment</h2><p className="mt-2 text-sm">Configure pickup and supported delivery in the business form.</p></div></aside></div>{business && <section className="form-section mt-5"><div className="mb-6 flex items-center gap-3"><Clock3 className="size-5 text-[var(--accent)]" /><div><h2 className="text-xl font-black">Operating hours</h2><p className="text-sm">Give buyers a predictable window for your business.</p></div></div><OperatingHoursForm initial={business.operatingHours.map((hour: BusinessOperatingHour) => ({ dayOfWeek: hour.dayOfWeek, openTime: hour.openTime, closeTime: hour.closeTime }))} /></section>}</main>;
 }

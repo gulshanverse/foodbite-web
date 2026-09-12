@@ -1,44 +1,6 @@
-import { requireRole } from '@/lib/authorization';
-import { listSellerDonations } from '@/lib/donation-domain';
-type SellerDonation = Awaited<ReturnType<typeof listSellerDonations>>[number];
-type SellerDonationReservation = SellerDonation['reservations'][number];
+import { HeartHandshake, PackageCheck } from "lucide-react";
+import { requireRole } from "@/lib/authorization";
+import { listSellerDonations } from "@/lib/donation-domain";
+type SellerDonation = Awaited<ReturnType<typeof listSellerDonations>>[number]; type SellerDonationReservation = SellerDonation["reservations"][number];
 
-export default async function SellerDonationsPage() {
-  const user = await requireRole('SELLER');
-  const donations = await listSellerDonations(user.id);
-  return (
-    <main className="mx-auto max-w-6xl px-6 py-12">
-      <p className="text-sm font-semibold uppercase tracking-[.18em] text-[#e85d3f]">
-        Seller operations
-      </p>
-      <h1 className="mt-3 text-4xl font-bold text-[#173f3b]">Donations</h1>
-      <p className="mt-3 text-[#55706c]">
-        Donation quantities are reserved from real inventory. Seller-provided food information is
-        not a FoodBite safety certification.
-      </p>
-      <div className="mt-10 space-y-4">
-        {donations.map((donation: SellerDonation) => (
-          <article key={donation.id} className="rounded-2xl border border-[#dbe4df] bg-white p-5">
-            <div className="flex flex-wrap justify-between gap-3">
-              <h2 className="font-bold text-[#173f3b]">{donation.listing.name}</h2>
-              <span className="rounded-full bg-[#eef2ef] px-3 py-1 text-xs font-bold">
-                {donation.status.replaceAll('_', ' ')}
-              </span>
-            </div>
-            <p className="mt-2 text-sm text-[#55706c]">
-              Available {donation.availableQuantity} · Reserved {donation.reservedQuantity} ·
-              Collected {donation.collectedQuantity}
-            </p>
-            {donation.reservations.map((reservation: SellerDonationReservation) => (
-              <p key={reservation.id} className="mt-3 text-sm text-[#55706c]">
-                Recovery partner: {reservation.ngo.organizationName} · {reservation.quantity}{' '}
-                portions
-              </p>
-            ))}
-          </article>
-        ))}
-        {!donations.length && <p className="text-sm text-[#55706c]">No donations created yet.</p>}
-      </div>
-    </main>
-  );
-}
+export default async function SellerDonationsPage() { const user = await requireRole("SELLER"); const donations = await listSellerDonations(user.id); return <main className="product-page"><div className="flex items-end gap-4"><span className="grid size-12 place-items-center rounded-2xl bg-[var(--accent-soft)] text-[var(--accent)]"><HeartHandshake className="size-6" /></span><div><p className="page-kicker">Surplus recovery</p><h1 className="mt-2 text-4xl font-black sm:text-5xl">Donations</h1></div></div><p className="mt-4 max-w-3xl">Move eligible surplus food into verified recovery workflows. Donation quantities are reserved from real inventory and never create orders or payments.</p><div className="mt-7 space-y-3">{donations.map((donation: SellerDonation) => <article key={donation.id} className="surface-card p-5 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="page-kicker">Donation record</p><h2 className="mt-2 text-xl font-black">{donation.listing.name}</h2></div><span className="status-chip" data-tone="accent">{donation.status.replaceAll("_", " ")}</span></div><div className="mt-5 grid gap-3 sm:grid-cols-3"><div className="surface-muted p-4"><p className="text-xs font-bold uppercase tracking-wide">Available</p><p className="mt-2 text-xl font-black">{donation.availableQuantity}</p></div><div className="surface-muted p-4"><p className="text-xs font-bold uppercase tracking-wide">Reserved</p><p className="mt-2 text-xl font-black">{donation.reservedQuantity}</p></div><div className="surface-muted p-4"><p className="text-xs font-bold uppercase tracking-wide">Collected</p><p className="mt-2 text-xl font-black">{donation.collectedQuantity}</p></div></div>{donation.reservations.length > 0 && <div className="mt-4 border-t border-[var(--border)] pt-4 space-y-2">{donation.reservations.map((reservation: SellerDonationReservation) => <p key={reservation.id} className="flex items-center gap-2 text-sm font-semibold"><PackageCheck className="size-4 text-[var(--accent)]" />{reservation.ngo.organizationName} · {reservation.quantity} portions</p>)}</div>}</article>)}{!donations.length && <div className="empty-state"><HeartHandshake className="mx-auto size-8 text-[var(--accent)]" /><h2 className="mt-4 text-xl font-black">No donations created yet</h2><p className="mt-2">Eligible surplus can be routed through the recovery workflow when available.</p></div>}</div></main>; }

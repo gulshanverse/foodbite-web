@@ -120,15 +120,43 @@ button { cursor: pointer; }
 .site-footer { margin-top: 64px; border-top: 1px solid var(--border); }
 .site-footer-inner { width: min(1280px, calc(100% - 32px)); margin: 0 auto; padding: 28px 0; display: flex; justify-content: space-between; gap: 16px; color: var(--muted); font-size: 13px; }
 
+/* Product-page language: shared across marketplace, commerce and workspaces. */
+.product-page { width: min(1280px, calc(100% - 32px)); margin: 0 auto; padding: 42px 0 72px; }
+.product-page > .page-kicker, .page-kicker { color: var(--accent) !important; font-size: 11px !important; font-weight: 850 !important; letter-spacing: .16em !important; text-transform: uppercase !important; }
+.product-page h1 { color: var(--foreground); font-size: clamp(32px, 5vw, 56px); line-height: 1.02; letter-spacing: -.05em; }
+.product-page h2 { color: var(--foreground); }
+.product-page p { color: var(--muted); }
+.surface-card { border: 1px solid var(--border); background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); }
+.surface-muted { border: 1px solid var(--border); background: var(--surface-muted); border-radius: 18px; }
+.metric-card { border: 1px solid var(--border); background: var(--surface); border-radius: 18px; padding: 20px; box-shadow: 0 8px 24px color-mix(in srgb, var(--foreground) 5%, transparent); }
+.metric-card .metric-label { color: var(--muted); font-size: 12px; font-weight: 700; }
+.metric-card .metric-value { margin-top: 8px; color: var(--foreground); font-size: 30px; font-weight: 850; letter-spacing: -.04em; }
+.status-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--surface-muted); color: var(--foreground); border-radius: 999px; padding: 5px 9px; font-size: 11px; font-weight: 800; }
+.status-chip[data-tone="accent"] { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); background: var(--accent-soft); color: var(--accent-strong); }
+.hero-panel { position: relative; overflow: hidden; border-radius: 28px; border: 1px solid var(--border); background: linear-gradient(135deg, var(--surface), var(--surface-muted)); box-shadow: var(--shadow); }
+.hero-panel::after { content: ""; position: absolute; width: 260px; height: 260px; right: -90px; top: -90px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 16%, transparent); filter: blur(2px); pointer-events: none; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
+.table-wrap table { min-width: 720px; border: 0; border-radius: 0; box-shadow: none; }
+.empty-state { border: 1px dashed color-mix(in srgb, var(--border) 90%, var(--foreground)); background: color-mix(in srgb, var(--surface) 92%, var(--surface-muted)); border-radius: 22px; padding: 48px 24px; text-align: center; }
+.form-section { border: 1px solid var(--border); background: var(--surface); border-radius: 22px; padding: 24px; box-shadow: var(--shadow); }
+
+/* Existing utility-heavy pages inherit the same theme in dark mode. */
+[data-theme="dark"] [class*="bg-white"], [data-theme="dark"] [class*="bg-[#f7f5ef]"] { background: var(--surface) !important; }
+[data-theme="dark"] [class*="bg-[#eef2ef]"] { background: var(--surface-muted) !important; }
+[data-theme="dark"] [class*="text-[#173f3b]"] { color: var(--foreground) !important; }
+[data-theme="dark"] [class*="text-[#55706c]"], [data-theme="dark"] [class*="text-[#8a9b96]"] { color: var(--muted) !important; }
+[data-theme="dark"] [class*="border-[#dbe4df]"], [data-theme="dark"] [class*="border-[#b8cbc4]"] { border-color: var(--border) !important; }
+
 @media (max-width: 900px) {
   .site-nav { display: none; }
   .dashboard-shell { display: block; padding-top: 14px; }
   .dashboard-sidebar { display: none; }
   .mobile-sidebar { display: flex; gap: 7px; }
   .dashboard-main { margin-top: 16px; }
+  .product-page { padding-top: 28px; }
 }
 @media (max-width: 640px) {
-  .site-header-inner, .page-container, .dashboard-shell, .site-footer-inner { width: min(100% - 24px, 1280px); }
+  .site-header-inner, .page-container, .dashboard-shell, .site-footer-inner, .product-page { width: min(100% - 24px, 1280px); }
   .site-header-inner { min-height: 64px; }
   .brand-mark { width: 34px; height: 34px; border-radius: 10px; }
   .brand { font-size: 15px; }
@@ -136,4 +164,8 @@ button { cursor: pointer; }
   .theme-trigger { padding: 8px 9px; }
   .site-footer-inner { flex-direction: column; }
   .dashboard-main main, .dashboard-main > main { padding-top: 4px !important; }
+  .product-page { padding-bottom: 44px; }
+  .surface-card, .form-section { border-radius: 18px; }
+  .metric-card .metric-value { font-size: 26px; }
+  .table-wrap { margin-inline: -1px; border-radius: 16px; }
 }

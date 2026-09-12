@@ -1,1 +1,2 @@
-export default function Loading() { return <main className="grid min-h-screen place-items-center text-[#55706c]">Loading FoodBite…</main>; }
+import { LoaderCircle } from "lucide-react";
+export default function Loading() { return <main className="grid min-h-[70vh] place-items-center px-6"><div className="text-center"><span className="mx-auto grid size-12 place-items-center rounded-2xl bg-[var(--accent-soft)] text-[var(--accent)]"><LoaderCircle className="size-6 animate-spin" /></span><p className="mt-4 text-sm font-bold text-[var(--muted)]">Loading FoodBite…</p></div></main>; }
