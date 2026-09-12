@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, ChevronRight, Clock3, HeartHandshake, MapPin, Sparkles, Store } from "lucide-react";
 
@@ -17,8 +17,8 @@ const pillars = [
 ];
 
 export default function Home() {
-  const [active, setActive] = useState(0);
-  useEffect(() => { const timer = window.setInterval(() => setActive((value) => (value + 1) % slides.length), 6000); return () => window.clearInterval(timer); }, []);
+  const [active, setActive] = React.useState(0);
+  React.useEffect(() => { const timer = window.setInterval(() => setActive((value) => (value + 1) % slides.length), 6000); return () => window.clearInterval(timer); }, []);
   const slide = slides[active];
   const Icon = slide.icon;
 
