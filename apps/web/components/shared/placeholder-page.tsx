@@ -3,7 +3,6 @@ import {
   ArrowRight,
   BarChart3,
   CheckCircle2,
-  ClipboardList,
   HeartHandshake,
   LayoutDashboard,
   Settings2,

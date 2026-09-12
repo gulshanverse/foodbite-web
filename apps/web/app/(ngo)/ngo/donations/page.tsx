@@ -12,35 +12,35 @@ export default async function NgoDonationsPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-12">
-      <p className="text-sm font-semibold uppercase tracking-[.18em] text-[#e85d3f]">Recovery partner</p>
-      <h1 className="mt-3 text-4xl font-bold text-[#173f3b]">Donation recovery</h1>
-      <p className="mt-3 text-[#55706c]">Browse surplus food offered by verified businesses. FoodBite does not certify food safety.</p>
+      <p className="text-sm font-semibold uppercase tracking-[.18em] text-[var(--accent)]">Recovery partner</p>
+      <h1 className="mt-3 text-4xl font-bold text-[var(--foreground)]">Donation recovery</h1>
+      <p className="mt-3 text-[var(--muted)]">Browse surplus food offered by verified businesses. FoodBite does not certify food safety.</p>
       {profile?.verificationStatus !== "VERIFIED" && (
-        <div className="mt-8 rounded-2xl bg-[#fff1e9] p-5 text-sm text-[#7b3b2e]">
+        <div className="mt-8 rounded-2xl bg-[var(--accent-soft)] p-5 text-sm text-[#7b3b2e]">
           Your NGO profile is {profile?.verificationStatus?.toLowerCase() ?? "not configured"}. An authorized administrator must verify it before reservations are enabled.
         </div>
       )}
       <section className="mt-10">
-        <h2 className="text-2xl font-bold text-[#173f3b]">Available donations</h2>
+        <h2 className="text-2xl font-bold text-[var(--foreground)]">Available donations</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           {available.map((donation: AvailableDonation) => (
-            <article key={donation.id} className="rounded-2xl border border-[#dbe4df] bg-white p-5">
-              <h3 className="font-bold text-[#173f3b]">{donation.listing.name}</h3>
-              <p className="mt-2 text-sm text-[#55706c]">{donation.availableQuantity} portions · {donation.listing.foodType.toLowerCase().replaceAll("_", " ")}</p>
-              <p className="mt-2 text-sm text-[#55706c]">Pickup: {donation.seller.business?.city ?? "Seller location"}</p>
+            <article key={donation.id} className="rounded-2xl border border-[var(--border)] bg-white p-5">
+              <h3 className="font-bold text-[var(--foreground)]">{donation.listing.name}</h3>
+              <p className="mt-2 text-sm text-[var(--muted)]">{donation.availableQuantity} portions · {donation.listing.foodType.toLowerCase().replaceAll("_", " ")}</p>
+              <p className="mt-2 text-sm text-[var(--muted)]">Pickup: {donation.seller.business?.city ?? "Seller location"}</p>
               <p className="mt-3 text-xs text-[#8a9b96]">Seller-provided information; FoodBite does not certify food safety.</p>
             </article>
           ))}
         </div>
-        {!available.length && <p className="mt-4 text-sm text-[#55706c]">No eligible donations are currently available.</p>}
+        {!available.length && <p className="mt-4 text-sm text-[var(--muted)]">No eligible donations are currently available.</p>}
       </section>
       <section className="mt-10">
-        <h2 className="text-2xl font-bold text-[#173f3b]">My accepted donations</h2>
+        <h2 className="text-2xl font-bold text-[var(--foreground)]">My accepted donations</h2>
         <div className="mt-4 space-y-3">
           {mine.map((reservation: NgoDonationReservation) => (
-            <div key={reservation.id} className="rounded-2xl border border-[#dbe4df] p-4">
+            <div key={reservation.id} className="rounded-2xl border border-[var(--border)] p-4">
               <strong>{reservation.donation.listing.name}</strong>
-              <span className="ml-3 text-sm text-[#55706c]">{reservation.quantity} portions · {reservation.donation.status.replaceAll("_", " ")}</span>
+              <span className="ml-3 text-sm text-[var(--muted)]">{reservation.quantity} portions · {reservation.donation.status.replaceAll("_", " ")}</span>
             </div>
           ))}
         </div>
