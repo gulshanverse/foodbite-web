@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "if [ \"$VERCEL\" = \"1\" ] && [ \"$VERCEL_ENV\" = \"production\" ]; then pnpm --dir ../.. db:migrate:deploy; fi && pnpm --dir ../.. db:generate && next build",
+    "build": "if [ \"$VERCEL\" = \"1\" ] && [ \"$VERCEL_ENV\" = \"production\" ]; then pnpm --dir ../.. exec prisma migrate resolve --rolled-back 20260905220000_phase4_orders_checkout || true; pnpm --dir ../.. db:migrate:deploy; fi && pnpm --dir ../.. db:generate && next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
