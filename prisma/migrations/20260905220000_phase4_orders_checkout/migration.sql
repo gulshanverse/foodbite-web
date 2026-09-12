@@ -1,55 +1,111 @@
--- Phase 4: cart, inventory reservations, orders, payments and pickup
-CREATE TYPE "OrderStatus" AS ENUM ('PENDING_PAYMENT','PAID','CONFIRMED','PREPARING','READY_FOR_PICKUP','PICKED_UP','COMPLETED','CANCELLED','REFUND_PENDING','REFUNDED','DISPUTED');
-CREATE TYPE "PaymentStatus" AS ENUM ('CREATED','PENDING','SUCCESS','FAILED','REFUNDED','PARTIALLY_REFUNDED');
-CREATE TYPE "ReservationStatus" AS ENUM ('ACTIVE','CONFIRMED','EXPIRED','CANCELLED');
-CREATE TYPE "PickupStatus" AS ENUM ('PENDING','READY','PICKED_UP','CANCELLED');
+-- Phase 4 recovery: upgrade the already-applied phase4_commerce schema in place.
+-- The previous version of this migration attempted to recreate Phase 4 tables/enums
+-- and failed on OrderStatus because 20260904100000_phase4_commerce already created them.
+-- Keep legacy columns where practical to avoid data loss; make them nullable when the
+-- current application no longer supplies them, and add/backfill the fields required by
+-- the current Prisma contract.
 
-CREATE TABLE "Cart" ("id" UUID NOT NULL,"userId" UUID NOT NULL,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,CONSTRAINT "Cart_pkey" PRIMARY KEY ("id"));
-CREATE UNIQUE INDEX "Cart_userId_key" ON "Cart"("userId");
-ALTER TABLE "Cart" ADD CONSTRAINT "Cart_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- OrderStatus gained DISPUTED after the original commerce migration.
+ALTER TYPE "OrderStatus" ADD VALUE IF NOT EXISTS 'DISPUTED';
 
-CREATE TABLE "CartItem" ("id" UUID NOT NULL,"cartId" UUID NOT NULL,"listingId" UUID NOT NULL,"quantity" INTEGER NOT NULL,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,CONSTRAINT "CartItem_pkey" PRIMARY KEY ("id"));
-CREATE UNIQUE INDEX "CartItem_cartId_listingId_key" ON "CartItem"("cartId","listingId");
-CREATE INDEX "CartItem_listingId_idx" ON "CartItem"("listingId");
-ALTER TABLE "CartItem" ADD CONSTRAINT "CartItem_cartId_fkey" FOREIGN KEY ("cartId") REFERENCES "Cart"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "CartItem" ADD CONSTRAINT "CartItem_listingId_fkey" FOREIGN KEY ("listingId") REFERENCES "FoodListing"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- Reservation evolved from order-owned reservations to buyer-owned reservations.
+ALTER TABLE "Reservation" ADD COLUMN IF NOT EXISTS "userId" UUID;
+UPDATE "Reservation" r
+SET "userId" = o."buyerId"
+FROM "Order" o
+WHERE r."orderId" = o."id"
+  AND r."userId" IS NULL;
+ALTER TABLE "Reservation" ALTER COLUMN "orderId" DROP NOT NULL;
+ALTER TABLE "Reservation" ALTER COLUMN "userId" SET NOT NULL;
+CREATE INDEX IF NOT EXISTS "Reservation_userId_status_idx" ON "Reservation"("userId", "status");
+ALTER TABLE "Reservation" DROP CONSTRAINT IF EXISTS "Reservation_userId_fkey";
+ALTER TABLE "Reservation" ADD CONSTRAINT "Reservation_userId_fkey"
+  FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
-CREATE TABLE "Reservation" ("id" UUID NOT NULL,"userId" UUID NOT NULL,"listingId" UUID NOT NULL,"quantity" INTEGER NOT NULL,"status" "ReservationStatus" NOT NULL DEFAULT 'ACTIVE',"expiresAt" TIMESTAMP(3) NOT NULL,"orderId" UUID,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,CONSTRAINT "Reservation_pkey" PRIMARY KEY ("id"));
-CREATE INDEX "Reservation_userId_status_idx" ON "Reservation"("userId","status");
-CREATE INDEX "Reservation_listingId_status_idx" ON "Reservation"("listingId","status");
-CREATE INDEX "Reservation_expiresAt_idx" ON "Reservation"("expiresAt");
-CREATE INDEX "Reservation_orderId_idx" ON "Reservation"("orderId");
-ALTER TABLE "Reservation" ADD CONSTRAINT "Reservation_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "Reservation" ADD CONSTRAINT "Reservation_listingId_fkey" FOREIGN KEY ("listingId") REFERENCES "FoodListing"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+-- The current order contract no longer requires the legacy seller/idempotency columns.
+ALTER TABLE "Order" ALTER COLUMN "sellerId" DROP NOT NULL;
+ALTER TABLE "Order" ALTER COLUMN "idempotencyKey" DROP NOT NULL;
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "buyerName" TEXT;
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "buyerPhone" TEXT;
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "pickupAddress" TEXT;
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "pickupCity" TEXT;
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "pickupPincode" TEXT;
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "paidAt" TIMESTAMP(3);
+UPDATE "Order" o
+SET "buyerName" = COALESCE(bp."name", u."email")
+FROM "User" u
+LEFT JOIN "BuyerProfile" bp ON bp."userId" = u."id"
+WHERE o."buyerId" = u."id"
+  AND o."buyerName" IS NULL;
+ALTER TABLE "Order" ALTER COLUMN "buyerName" SET NOT NULL;
+CREATE INDEX IF NOT EXISTS "Order_status_createdAt_idx" ON "Order"("status", "createdAt");
 
-CREATE TABLE "Order" ("id" UUID NOT NULL,"orderNumber" TEXT NOT NULL,"buyerId" UUID NOT NULL,"status" "OrderStatus" NOT NULL DEFAULT 'PENDING_PAYMENT',"subtotal" INTEGER NOT NULL,"totalAmount" INTEGER NOT NULL,"currency" TEXT NOT NULL DEFAULT 'INR',"buyerName" TEXT NOT NULL,"buyerPhone" TEXT,"pickupAddress" TEXT,"pickupCity" TEXT,"pickupPincode" TEXT,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,"paidAt" TIMESTAMP(3),"cancelledAt" TIMESTAMP(3),"completedAt" TIMESTAMP(3),CONSTRAINT "Order_pkey" PRIMARY KEY ("id"));
-CREATE UNIQUE INDEX "Order_orderNumber_key" ON "Order"("orderNumber");
-CREATE INDEX "Order_buyerId_createdAt_idx" ON "Order"("buyerId","createdAt");
-CREATE INDEX "Order_status_createdAt_idx" ON "Order"("status","createdAt");
-ALTER TABLE "Order" ADD CONSTRAINT "Order_buyerId_fkey" FOREIGN KEY ("buyerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "Reservation" ADD CONSTRAINT "Reservation_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- OrderItem gained normalized listing snapshots while retaining the old snapshot columns.
+ALTER TABLE "OrderItem" ADD COLUMN IF NOT EXISTS "listingName" TEXT;
+ALTER TABLE "OrderItem" ADD COLUMN IF NOT EXISTS "unit" "ListingUnit";
+ALTER TABLE "OrderItem" ADD COLUMN IF NOT EXISTS "foodType" "FoodType";
+ALTER TABLE "OrderItem" ADD COLUMN IF NOT EXISTS "originalUnitPrice" INTEGER;
+ALTER TABLE "OrderItem" ADD COLUMN IF NOT EXISTS "lineTotal" INTEGER;
+UPDATE "OrderItem" oi
+SET
+  "listingName" = COALESCE(oi."listingName", fl."name"),
+  "unit" = COALESCE(oi."unit", fl."unit"),
+  "foodType" = COALESCE(oi."foodType", fl."foodType"),
+  "originalUnitPrice" = COALESCE(oi."originalUnitPrice", fl."originalPrice"),
+  "lineTotal" = COALESCE(oi."lineTotal", oi."totalPrice")
+FROM "FoodListing" fl
+WHERE oi."listingId" = fl."id";
+ALTER TABLE "OrderItem" ALTER COLUMN "listingName" SET NOT NULL;
+ALTER TABLE "OrderItem" ALTER COLUMN "unit" SET NOT NULL;
+ALTER TABLE "OrderItem" ALTER COLUMN "foodType" SET NOT NULL;
+ALTER TABLE "OrderItem" ALTER COLUMN "originalUnitPrice" SET NOT NULL;
+ALTER TABLE "OrderItem" ALTER COLUMN "lineTotal" SET NOT NULL;
+ALTER TABLE "OrderItem" ALTER COLUMN "listingNameSnapshot" DROP NOT NULL;
+ALTER TABLE "OrderItem" ALTER COLUMN "pickupStartSnapshot" DROP NOT NULL;
+ALTER TABLE "OrderItem" ALTER COLUMN "pickupEndSnapshot" DROP NOT NULL;
+ALTER TABLE "OrderItem" ALTER COLUMN "totalPrice" DROP NOT NULL;
 
-CREATE TABLE "OrderItem" ("id" UUID NOT NULL,"orderId" UUID NOT NULL,"listingId" UUID NOT NULL,"sellerId" UUID NOT NULL,"listingName" TEXT NOT NULL,"unit" "ListingUnit" NOT NULL,"foodType" "FoodType" NOT NULL,"quantity" INTEGER NOT NULL,"unitPrice" INTEGER NOT NULL,"originalUnitPrice" INTEGER NOT NULL,"lineTotal" INTEGER NOT NULL,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "OrderItem_pkey" PRIMARY KEY ("id"));
-CREATE INDEX "OrderItem_orderId_idx" ON "OrderItem"("orderId");
-CREATE INDEX "OrderItem_listingId_idx" ON "OrderItem"("listingId");
-CREATE INDEX "OrderItem_sellerId_createdAt_idx" ON "OrderItem"("sellerId","createdAt");
-ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_listingId_fkey" FOREIGN KEY ("listingId") REFERENCES "FoodListing"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_sellerId_fkey" FOREIGN KEY ("sellerId") REFERENCES "SellerProfile"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+-- Payment gained explicit failure and paid timestamps.
+ALTER TABLE "Payment" ADD COLUMN IF NOT EXISTS "failureReason" TEXT;
+ALTER TABLE "Payment" ADD COLUMN IF NOT EXISTS "paidAt" TIMESTAMP(3);
+CREATE UNIQUE INDEX IF NOT EXISTS "Payment_orderId_key" ON "Payment"("orderId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Payment_providerOrderId_key" ON "Payment"("providerOrderId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Payment_providerPaymentId_key" ON "Payment"("providerPaymentId");
 
-CREATE TABLE "Payment" ("id" UUID NOT NULL,"orderId" UUID NOT NULL,"provider" TEXT NOT NULL,"providerOrderId" TEXT,"providerPaymentId" TEXT,"amount" INTEGER NOT NULL,"currency" TEXT NOT NULL DEFAULT 'INR',"status" "PaymentStatus" NOT NULL DEFAULT 'CREATED',"failureReason" TEXT,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,"paidAt" TIMESTAMP(3),CONSTRAINT "Payment_pkey" PRIMARY KEY ("id"));
-CREATE UNIQUE INDEX "Payment_orderId_key" ON "Payment"("orderId");
-CREATE UNIQUE INDEX "Payment_providerOrderId_key" ON "Payment"("providerOrderId");
-CREATE UNIQUE INDEX "Payment_providerPaymentId_key" ON "Payment"("providerPaymentId");
-ALTER TABLE "Payment" ADD CONSTRAINT "Payment_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- Webhook records evolved from hash-only payloads to durable JSON event records.
+ALTER TABLE "PaymentWebhook" ADD COLUMN IF NOT EXISTS "payload" JSONB;
+UPDATE "PaymentWebhook"
+SET "payload" = '{}'::jsonb
+WHERE "payload" IS NULL;
+ALTER TABLE "PaymentWebhook" ALTER COLUMN "payload" SET NOT NULL;
+ALTER TABLE "PaymentWebhook" ADD COLUMN IF NOT EXISTS "receivedAt" TIMESTAMP(3);
+UPDATE "PaymentWebhook"
+SET "receivedAt" = COALESCE("createdAt", CURRENT_TIMESTAMP)
+WHERE "receivedAt" IS NULL;
+ALTER TABLE "PaymentWebhook" ALTER COLUMN "receivedAt" SET DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE "PaymentWebhook" ALTER COLUMN "receivedAt" SET NOT NULL;
+ALTER TABLE "PaymentWebhook" ADD COLUMN IF NOT EXISTS "paymentId" UUID;
+CREATE UNIQUE INDEX IF NOT EXISTS "PaymentWebhook_eventId_key" ON "PaymentWebhook"("eventId");
+CREATE INDEX IF NOT EXISTS "PaymentWebhook_paymentId_idx" ON "PaymentWebhook"("paymentId");
+ALTER TABLE "PaymentWebhook" DROP CONSTRAINT IF EXISTS "PaymentWebhook_paymentId_fkey";
+ALTER TABLE "PaymentWebhook" ADD CONSTRAINT "PaymentWebhook_paymentId_fkey"
+  FOREIGN KEY ("paymentId") REFERENCES "Payment"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
-CREATE TABLE "PaymentWebhook" ("id" UUID NOT NULL,"eventId" TEXT NOT NULL,"provider" TEXT NOT NULL,"eventType" TEXT NOT NULL,"payload" JSONB NOT NULL,"receivedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"processedAt" TIMESTAMP(3),"paymentId" UUID,CONSTRAINT "PaymentWebhook_pkey" PRIMARY KEY ("id"));
-CREATE UNIQUE INDEX "PaymentWebhook_eventId_key" ON "PaymentWebhook"("eventId");
-CREATE INDEX "PaymentWebhook_paymentId_idx" ON "PaymentWebhook"("paymentId");
-ALTER TABLE "PaymentWebhook" ADD CONSTRAINT "PaymentWebhook_paymentId_fkey" FOREIGN KEY ("paymentId") REFERENCES "Payment"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- Pickup gained an explicit lifecycle state and timestamps. Legacy verification columns
+-- remain in place; the current application uses the new lifecycle and secret fields.
+CREATE TYPE "PickupStatus" AS ENUM ('PENDING', 'READY', 'PICKED_UP', 'CANCELLED');
+ALTER TABLE "Pickup" ADD COLUMN "status" "PickupStatus" NOT NULL DEFAULT 'PENDING';
+ALTER TABLE "Pickup" ADD COLUMN "pickupCodeLast4" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "Pickup" ADD COLUMN "readyAt" TIMESTAMP(3);
+ALTER TABLE "Pickup" ADD COLUMN "pickedUpAt" TIMESTAMP(3);
+UPDATE "Pickup"
+SET "qrTokenHash" = 'legacy:' || "id"::text
+WHERE "qrTokenHash" IS NULL;
+ALTER TABLE "Pickup" ALTER COLUMN "qrTokenHash" SET NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS "Pickup_pickupCodeHash_key" ON "Pickup"("pickupCodeHash");
+CREATE UNIQUE INDEX IF NOT EXISTS "Pickup_qrTokenHash_key" ON "Pickup"("qrTokenHash");
 
-CREATE TABLE "Pickup" ("id" UUID NOT NULL,"orderId" UUID NOT NULL,"status" "PickupStatus" NOT NULL DEFAULT 'PENDING',"pickupCodeHash" TEXT NOT NULL,"pickupCodeLast4" TEXT NOT NULL,"qrTokenHash" TEXT NOT NULL,"readyAt" TIMESTAMP(3),"pickedUpAt" TIMESTAMP(3),"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,CONSTRAINT "Pickup_pkey" PRIMARY KEY ("id"));
-CREATE UNIQUE INDEX "Pickup_orderId_key" ON "Pickup"("orderId");
-CREATE UNIQUE INDEX "Pickup_pickupCodeHash_key" ON "Pickup"("pickupCodeHash");
-CREATE UNIQUE INDEX "Pickup_qrTokenHash_key" ON "Pickup"("qrTokenHash");
-ALTER TABLE "Pickup" ADD CONSTRAINT "Pickup_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- Match the current CartItem delete semantics without touching cart data.
+ALTER TABLE "CartItem" DROP CONSTRAINT IF EXISTS "CartItem_listingId_fkey";
+ALTER TABLE "CartItem" ADD CONSTRAINT "CartItem_listingId_fkey"
+  FOREIGN KEY ("listingId") REFERENCES "FoodListing"("id") ON DELETE CASCADE ON UPDATE CASCADE;
