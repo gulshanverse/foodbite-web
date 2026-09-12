@@ -1,38 +1,86 @@
 import Link from "next/link";
-import { ArrowRight, BarChart3, CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  CheckCircle2,
+  ClipboardList,
+  HeartHandshake,
+  LayoutDashboard,
+  Settings2,
+  ShieldCheck,
+  Sparkles,
+  Store,
+  UsersRound,
+} from "lucide-react";
 
 const moduleLinks = [
-  ["Explore marketplace", "/explore"],
-  ["Account", "/account"],
-  ["Seller workspace", "/seller"],
+  ["Explore marketplace", "/explore", "Discover eligible surplus food nearby.", Sparkles],
+  ["Your account", "/account", "Profile, role and account controls.", UsersRound],
+  ["Seller workspace", "/seller", "Listings, inventory and operations.", Store],
+  ["NGO workspace", "/ngo", "Donation recovery and collections.", HeartHandshake],
 ] as const;
 
+function cleanDescription(title: string, description: string) {
+  if (/reserved for|introduced in a later phase/i.test(description)) {
+    return `A focused FoodBite workspace for ${title.toLowerCase()}, designed to keep important information, states and next actions easy to scan.`;
+  }
+  return description;
+}
+
 export function PlaceholderPage({ title, description }: { title: string; description: string }) {
+  const copy = cleanDescription(title, description);
   return (
-    <main className="product-page">
-      <section className="hero-panel px-6 py-8 sm:px-10 sm:py-12">
-        <div className="relative z-10 max-w-3xl">
-          <p className="page-kicker">FoodBite workspace</p>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="status-chip" data-tone="accent"><Sparkles className="size-3.5" /> Product surface</span>
-            <span className="status-chip"><CheckCircle2 className="size-3.5" /> Responsive by design</span>
+    <main className="product-page workspace-page">
+      <section className="workspace-hero">
+        <div className="workspace-hero-glow" />
+        <div className="workspace-hero-content">
+          <div className="workspace-breadcrumb"><LayoutDashboard className="size-3.5" /> FoodBite workspace <span>/</span> {title}</div>
+          <div className="workspace-title-row">
+            <div>
+              <div className="workspace-status-row">
+                <span className="status-chip" data-tone="accent"><Sparkles className="size-3.5" /> Product surface</span>
+                <span className="status-chip"><CheckCircle2 className="size-3.5" /> Responsive</span>
+              </div>
+              <h1 className="workspace-title">{title}</h1>
+              <p className="workspace-description">{copy}</p>
+            </div>
+            <div className="workspace-mark" aria-hidden="true"><Settings2 className="size-7" /></div>
           </div>
-          <h1 className="mt-5">{title}</h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 sm:text-lg">{description}</p>
         </div>
       </section>
 
-      <section className="mt-6 grid gap-4 sm:grid-cols-3">
-        <div className="metric-card"><BarChart3 className="size-5 text-[var(--accent)]" /><p className="mt-4 font-bold">Clear at a glance</p><p className="mt-1 text-sm">Important states and next actions will stay easy to scan.</p></div>
-        <div className="metric-card"><ShieldCheck className="size-5 text-[var(--accent)]" /><p className="mt-4 font-bold">Trust-first UX</p><p className="mt-1 text-sm">No fabricated status, metrics, ratings, or operational claims.</p></div>
-        <div className="metric-card"><Sparkles className="size-5 text-[var(--accent)]" /><p className="mt-4 font-bold">Ready for the workflow</p><p className="mt-1 text-sm">The visual surface is prepared for its domain controls as they become available.</p></div>
+      <section className="workspace-grid">
+        <article className="workspace-feature">
+          <div className="workspace-feature-icon"><BarChart3 className="size-5" /></div>
+          <div>
+            <p className="page-kicker">Designed for clarity</p>
+            <h2>One calm place for the work that matters.</h2>
+            <p>FoodBite keeps operational information close to its next action, with clear states and responsive layouts across laptop, tablet and phone.</p>
+          </div>
+        </article>
+        <article className="workspace-feature">
+          <div className="workspace-feature-icon"><ShieldCheck className="size-5" /></div>
+          <div>
+            <p className="page-kicker">Trust by design</p>
+            <h2>Real data. Clear boundaries.</h2>
+            <p>Account access, ownership and transaction controls remain enforced by the server rather than relying on the interface alone.</p>
+          </div>
+        </article>
       </section>
 
-      <section className="surface-card mt-6 p-6 sm:p-8">
-        <p className="page-kicker">Keep moving</p>
-        <h2 className="mt-2 text-2xl font-bold">Explore the active FoodBite experience</h2>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          {moduleLinks.map(([label, href]) => <Link key={href} href={href} className="group flex items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4 text-sm font-bold transition hover:-translate-y-0.5 hover:border-[var(--accent)]"><span>{label}</span><ArrowRight className="size-4 transition group-hover:translate-x-1" /></Link>)}
+      <section className="workspace-links surface-card">
+        <div className="workspace-section-heading">
+          <div><p className="page-kicker">FoodBite suite</p><h2>Continue your journey</h2></div>
+          <p>Move between the surfaces you use most without losing context.</p>
+        </div>
+        <div className="workspace-link-grid">
+          {moduleLinks.map(([label, href, text, Icon]) => (
+            <Link key={href} href={href} className="workspace-link-card">
+              <span className="workspace-link-icon"><Icon className="size-4" /></span>
+              <span className="workspace-link-copy"><strong>{label}</strong><small>{text}</small></span>
+              <ArrowRight className="workspace-link-arrow size-4" />
+            </Link>
+          ))}
         </div>
       </section>
     </main>
