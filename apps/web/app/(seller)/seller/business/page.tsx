@@ -1,9 +1,6 @@
-import type { Prisma } from "@prisma/client";
 import { requireRole } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { BusinessForm, OperatingHoursForm } from "@/components/seller/seller-forms";
-
-type BusinessOperatingHour = Prisma.BusinessOperatingHourGetPayload<{}>;
 
 export default async function SellerBusinessPage() {
   const user = await requireRole("SELLER");
@@ -47,7 +44,7 @@ export default async function SellerBusinessPage() {
       </div>
       {business && (
         <OperatingHoursForm
-          initial={business.operatingHours.map((hour: BusinessOperatingHour) => ({
+          initial={business.operatingHours.map((hour) => ({
             dayOfWeek: hour.dayOfWeek,
             openTime: hour.openTime,
             closeTime: hour.closeTime,
