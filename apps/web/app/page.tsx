@@ -41,7 +41,7 @@ export default function Home() {
               <h2>{slide.title}</h2><p>{slide.copy}</p>
               <div className="home-story-detail"><div><small>DESIGNED AROUND</small><strong>Nearby discovery · clear availability · accountable transactions</strong></div><div className="home-story-line" /><div><small>GOOD FOOD</small><strong>Less waste, more value, better next chapters.</strong></div></div>
             </div>
-            <div className="home-story-controls"><button type="button" onClick={() => setActive((active - 1 + slides.length) % slides.length)} aria-label="Previous story"><ChevronLeft className="size-4" /></button><div className="home-story-dots">{slides.map((item, index) => <button key={item.eyebrow} type="button" aria-label={`Show story ${index + 1}`} aria-current={index === active} onClick={() => setActive(index)} />)}</div><button type="button" onClick={() => setActive((active + 1) % slides.length)} aria-label="Next story"><ChevronRight className="size-4" /></button></div>
+            <div className="home-story-controls"><button type="button" onClick={() => setActive((value) => (value - 1 + slides.length) % slides.length)} aria-label="Previous story"><ChevronLeft className="size-4" /></button><div className="home-story-dots">{slides.map((item, index) => <button key={item.eyebrow} type="button" aria-label={`Show story ${index + 1}`} aria-current={index === active} onClick={() => setActive(index)} />)}</div><button type="button" onClick={() => setActive((value) => (value + 1) % slides.length)} aria-label="Next story"><ChevronRight className="size-4" /></button></div>
           </div>
         </div>
       </section>
