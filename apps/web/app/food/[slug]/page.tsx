@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { CheckCircle2, Clock3, MapPin, Package, ShieldCheck } from "lucide-react";
 import { AddToCart } from "@/components/checkout/add-to-cart";
 import { FavoriteButton } from "@/components/marketplace/favorite-button";
@@ -12,7 +13,7 @@ export default async function FoodDetailPage({ params }: { params: Promise<{ slu
   return <main className="product-page">
     <Link href="/explore" className="inline-flex items-center gap-2 text-sm font-bold text-[var(--muted)] hover:text-[var(--foreground)]">← Back to explore</Link>
     <div className="mt-7 grid gap-8 lg:grid-cols-[1.05fr_.95fr] lg:items-start">
-      <div className="overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--surface-muted)] shadow-[var(--shadow)]"><div className="aspect-[4/3]">{image ? <img src={image.url} alt={image.altText} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center font-bold text-[var(--muted)]">Surplus food</div>}</div></div>
+      <div className="overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--surface-muted)] shadow-[var(--shadow)]"><div className="relative aspect-[4/3]">{image ? <Image src={image.url} alt={image.altText} fill unoptimized sizes="(max-width: 1024px) 100vw, 52vw" className="object-cover" /> : <div className="grid h-full place-items-center font-bold text-[var(--muted)]">Surplus food</div>}</div></div>
       <div>
         <div className="flex items-start justify-between gap-4"><div><p className="page-kicker">{listing.category.name}</p><h1 className="mt-3 text-4xl font-black sm:text-5xl">{listing.name}</h1><p className="mt-3 font-semibold text-[var(--muted)]">{business?.name ?? "Local food business"}</p></div><FavoriteButton listingId={listing.id} /></div>
         <div className="mt-7 flex flex-wrap items-end gap-3"><span className="text-4xl font-black">₹{Math.round(listing.sellingPrice / 100)}</span><span className="pb-1 text-lg text-[var(--muted)] line-through">₹{Math.round(listing.originalPrice / 100)}</span><span className="status-chip" data-tone="accent">{listing.discountPercent}% off</span></div>

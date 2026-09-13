@@ -276,3 +276,17 @@ button { cursor:pointer; }
   .home-cta { padding-bottom:64px; }
 }
 @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } *,*::before,*::after { animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; } }
+
+/* Desktop composition: keep the product story visible at 100% zoom on short viewports. */
+.home-hero { min-height:clamp(480px,calc(100svh - 190px),600px); padding:36px 0 44px; gap:clamp(30px,4vw,64px); }
+.home-hero h1 { font-size:clamp(56px,6.1vw,86px); }
+.home-intro { margin-top:21px; font-size:clamp(15px,1.25vw,18px); line-height:1.55; }
+.home-actions { margin-top:24px; }
+.home-trust-row { margin-top:20px; }
+.home-story-stage { min-height:clamp(430px,calc(100svh - 280px),510px); }
+.home-story-card { inset:68px 34px 78px; }
+.home-section { padding:64px 0; }
+.home-pillars { margin-top:28px; }
+.home-pillar { min-height:190px; }
+@media (max-width:1050px) { .home-hero { min-height:auto; padding-top:48px; } .home-story-stage { min-height:540px; } }
+@media (max-width:640px) { .home-hero { min-height:auto; padding-top:34px; } .home-story-stage { min-height:500px; } }

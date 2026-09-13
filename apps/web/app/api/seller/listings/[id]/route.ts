@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { transitionOwnedListing } from "@/lib/seller-domain";
+import { transitionOwnedListing, updateOwnedListing } from "@/lib/seller-domain";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser(); if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 }); if (user.role !== "SELLER") return NextResponse.json({ error: "Forbidden." }, { status: 403 });
@@ -12,6 +12,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser(); if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 }); if (user.role !== "SELLER") return NextResponse.json({ error: "Forbidden." }, { status: 403 });
-  try { const { id } = await params; const body = await request.json() as { action?: "PUBLISH" | "PAUSE" | "RESUME" | "CANCEL" }; const target = body.action === "PUBLISH" ? "ACTIVE" : body.action === "PAUSE" ? "PAUSED" : body.action === "RESUME" ? "ACTIVE" : "CANCELLED"; const listing = await transitionOwnedListing(user.id, id, target); return NextResponse.json({ listing }); }
+  try {
+    const { id } = await params;
+    const body = await request.json() as { action?: "PUBLISH" | "PAUSE" | "RESUME" | "CANCEL" } & Record<string, unknown>;
+    if (!body.action) return NextResponse.json({ listing: await updateOwnedListing(user.id, id, body) });
+    const target = body.action === "PUBLISH" ? "ACTIVE" : body.action === "PAUSE" ? "PAUSED" : body.action === "RESUME" ? "ACTIVE" : "CANCELLED";
+    return NextResponse.json({ listing: await transitionOwnedListing(user.id, id, target) });
+  }
   catch { return NextResponse.json({ error: "Listing action could not be completed." }, { status: 400 }); }
 }

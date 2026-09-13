@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
-const protectedPrefixes = ["/buyer", "/seller", "/admin", "/ngo", "/account"];
+const protectedPrefixes = ["/buyer", "/seller", "/admin", "/ngo"];
 const requestIdPattern = /^[A-Za-z0-9._:-]{8,128}$/;
 function withRequestId(request: NextRequest, requestId: string) { const headers = new Headers(request.headers); headers.set("x-request-id", requestId); return headers; }
 function secure(response: NextResponse, requestId: string) {

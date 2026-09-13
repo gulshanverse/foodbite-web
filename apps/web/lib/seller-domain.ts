@@ -29,6 +29,33 @@ export async function createListing(userId: string, input: unknown, status: "DRA
   });
 }
 
+export async function updateOwnedListing(userId: string, listingId: string, input: unknown) {
+  const seller = await getOwnedSeller(userId);
+  const parsed = listingSchema.parse(input);
+  const existing = await prisma.foodListing.findFirst({ where: { id: listingId, sellerId: seller.id } });
+  if (!existing || !["DRAFT", "PAUSED", "ACTIVE"].includes(existing.status)) throw new Error("Listing cannot be edited in its current state.");
+  if (existing.status === "ACTIVE" && new Date(parsed.pickupEnd) <= new Date()) throw new Error("Pickup window has ended.");
+  return prisma.foodListing.update({
+    where: { id: listingId },
+    data: {
+      name: parsed.name,
+      categoryId: parsed.categoryId,
+      listingType: parsed.listingType,
+      foodType: parsed.foodType,
+      description: parsed.description,
+      originalPrice: parsed.originalPrice,
+      sellingPrice: parsed.sellingPrice,
+      quantity: parsed.quantity,
+      unit: parsed.unit,
+      preparedAt: parsed.preparedAt ? new Date(parsed.preparedAt) : null,
+      pickupStart: new Date(parsed.pickupStart),
+      pickupEnd: new Date(parsed.pickupEnd),
+      packagingInfo: parsed.packagingInfo,
+      allergenInfo: parsed.allergenInfo,
+    },
+  });
+}
+
 export async function transitionOwnedListing(userId: string, listingId: string, to: ListingStatus) {
   const seller = await getOwnedSeller(userId);
   const listing = await prisma.foodListing.findFirst({ where: { id: listingId, sellerId: seller.id } });

@@ -51,13 +51,13 @@ export async function createOrderFromCart(userId: string, fulfillment: { method?
     const now = new Date(); await expireReservations(tx, now);
     const buyer = await tx.user.findFirst({ where: { id: userId, role: "BUYER", status: "ACTIVE", deletedAt: null }, include: { buyerProfile: true, cart: { include: { items: { include: { listing: { include: { inventory: true, seller: { include: { business: true } } } } } } } } } });
     if (!buyer?.cart?.items.length) throw new Error("Your cart is empty.");
-    const reservations: Array<{ id: string }> = []; const items: Array<{ listingId: string; sellerId: string; listingName: string; unit: ListingUnit; foodType: FoodType; quantity: number; unitPrice: number; originalUnitPrice: number; lineTotal: number }> = [];
+    const reservations: Array<{ id: string }> = []; const items: Array<{ listingId: string; sellerId: string; listingName: string; listingNameSnapshot: string; unit: ListingUnit; foodType: FoodType; foodTypeSnapshot: FoodType; quantity: number; unitPrice: number; originalUnitPrice: number; lineTotal: number; totalPrice: number; pickupStartSnapshot: Date; pickupEndSnapshot: Date }> = [];
     for (const cartItem of buyer.cart.items) {
       const listing = cartItem.listing; const locked = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`SELECT "id" FROM "Inventory" WHERE "listingId" = ${listing.id}::uuid FOR UPDATE`);
       if (!locked.length || !listing.inventory || listing.status !== "ACTIVE" || listing.pickupEnd <= now || listing.inventory.availableQuantity < cartItem.quantity) throw new Error(`"${listing.name}" is no longer available in the requested quantity.`);
       await tx.inventory.update({ where: { listingId: listing.id }, data: { availableQuantity: { decrement: cartItem.quantity }, reservedQuantity: { increment: cartItem.quantity }, version: { increment: 1 } } });
       const reservation = await tx.reservation.create({ data: { userId, listingId: listing.id, quantity: cartItem.quantity, status: "ACTIVE", expiresAt: new Date(now.getTime() + RESERVATION_MINUTES * 60_000) } }); reservations.push({ id: reservation.id });
-      items.push({ listingId: listing.id, sellerId: listing.sellerId, listingName: listing.name, unit: listing.unit, foodType: listing.foodType, quantity: cartItem.quantity, unitPrice: listing.sellingPrice, originalUnitPrice: listing.originalPrice, lineTotal: listing.sellingPrice * cartItem.quantity });
+      items.push({ listingId: listing.id, sellerId: listing.sellerId, listingName: listing.name, listingNameSnapshot: listing.name, unit: listing.unit, foodType: listing.foodType, foodTypeSnapshot: listing.foodType, quantity: cartItem.quantity, unitPrice: listing.sellingPrice, originalUnitPrice: listing.originalPrice, lineTotal: listing.sellingPrice * cartItem.quantity, totalPrice: listing.sellingPrice * cartItem.quantity, pickupStartSnapshot: listing.pickupStart, pickupEndSnapshot: listing.pickupEnd });
     }
     const method = fulfillment.method ?? "PICKUP";
     const business = buyer.cart.items[0]?.listing.seller.business;

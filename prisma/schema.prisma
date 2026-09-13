@@ -578,12 +578,17 @@ model OrderItem {
   listingId String @db.Uuid
   sellerId String @db.Uuid
   listingName String
+  listingNameSnapshot String?
   unit ListingUnit
   foodType FoodType
+  foodTypeSnapshot FoodType
   quantity Int
   unitPrice Int
   originalUnitPrice Int
   lineTotal Int
+  totalPrice Int?
+  pickupStartSnapshot DateTime?
+  pickupEndSnapshot DateTime?
   createdAt DateTime @default(now())
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
   listing FoodListing @relation(fields: [listingId], references: [id], onDelete: Restrict)
