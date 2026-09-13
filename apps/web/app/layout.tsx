@@ -4,6 +4,7 @@ import "./premium-overrides.css";
 import { SiteFooter } from "@/components/shared/site-footer";
 import { SiteHeader } from "@/components/shared/site-header";
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "FoodBite — Good Food. Less Waste.",
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <div className="site-content">{children}</div>
           <SiteFooter />
         </ThemeProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
